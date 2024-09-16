@@ -18,12 +18,11 @@ local Tabs = {
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
     ['UI Settings'] = Window:AddTab('UI Settings'),
-    Misc = Window:AddTab('Misc')  -- Added Misc tab for the FOV slider
 }
 
--- Aimbot Settings
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
+-- Aimbot Toggles
 LeftGroupBoxAim:AddToggle('AimbotToggle', {
     Text = 'Enable Aimbot',
     Default = false,
@@ -42,6 +41,7 @@ LeftGroupBoxAim:AddToggle('ShowFOV', {
     end
 })
 
+-- FOV Size Slider
 LeftGroupBoxAim:AddSlider('FOVSize', {
     Text = 'FOV Size',
     Default = 100,
@@ -51,12 +51,32 @@ LeftGroupBoxAim:AddSlider('FOVSize', {
     Rounding = 0,
     Compact = false,
     HideMax = false,
-    Tooltip = 'Adjust the size of the FOV for the aimbot',
+    Tooltip = 'Adjust the size of the FOV circle',
     Callback = function(Value)
         print('[Aimbot] FOV Size:', Value)
+        UpdateFOV() -- Update FOV circle size
     end
 })
 
+-- Camera FOV Slider
+LeftGroupBoxAim:AddSlider('CameraFOV', {
+    Text = 'Camera FOV',
+    Default = 70,
+    Min = 30,
+    Max = 120,
+    Suffix = '°',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the camera field of view',
+    Callback = function(Value)
+        local camera = game.Workspace.CurrentCamera
+        camera.FieldOfView = Value
+        print('[Camera] FOV set to:', Value)
+    end
+})
+
+-- Aimbot Smoothness Slider
 LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
     Text = 'Aimbot Smoothness',
     Default = 5,
@@ -81,14 +101,15 @@ FOVCircle.Filled = false
 FOVCircle.Visible = false
 
 local function UpdateFOV()
-    FOVCircle.Position = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y / 2)
-    FOVCircle.Radius = Options.FOVSize.Value
-    FOVCircle.Visible = Toggles.ShowFOV.Value
+    local mouse = game.Players.LocalPlayer:GetMouse()
+    FOVCircle.Position = Vector2.new(mouse.X, mouse.Y)
+    FOVCircle.Radius = Tabs.Aim:GetOption('FOVSize').Value
+    FOVCircle.Visible = Tabs.Aim:GetOption('ShowFOV').Value
 end
 
 -- Aimbot Logic (with FOV and Smoothness)
 local function Aimbot()
-    if not Toggles.AimbotToggle.Value then return end
+    if not Tabs.Aim:GetOption('AimbotToggle').Value then return end
 
     local camera = game.Workspace.CurrentCamera
     local localPlayer = game.Players.LocalPlayer
@@ -102,7 +123,7 @@ local function Aimbot()
 
             if onScreen then
                 local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                if (not Toggles.ShowFOV.Value or distance < Options.FOVSize.Value) and distance < shortestDistance then
+                if (not Tabs.Aim:GetOption('ShowFOV').Value or distance < Tabs.Aim:GetOption('FOVSize').Value) and distance < shortestDistance then
                     shortestDistance = distance
                     closestPlayer = player
                 end
@@ -113,7 +134,7 @@ local function Aimbot()
     if closestPlayer then
         local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
         local currentPosition = camera.CFrame.Position
-        local newPosition = currentPosition:Lerp(targetPosition, Options.AimbotSmoothness.Value / 100)
+        local newPosition = currentPosition:Lerp(targetPosition, Tabs.Aim:GetOption('AimbotSmoothness').Value / 100)
 
         camera.CFrame = CFrame.new(newPosition, closestPlayer.Character.HumanoidRootPart.Position)
         print('[Aimbot] Aiming at', closestPlayer.Name)
@@ -121,8 +142,8 @@ local function Aimbot()
 end
 
 -- Continuously check for the aimbot toggle and execute logic
-Toggles.AimbotToggle:OnChanged(function()
-    if Toggles.AimbotToggle.Value then
+Tabs.Aim:GetOption('AimbotToggle'):OnChanged(function()
+    if Tabs.Aim:GetOption('AimbotToggle').Value then
         print('[Aimbot] Aimbot activated')
         game:GetService('RunService').Stepped:Connect(Aimbot)
     else
@@ -159,7 +180,7 @@ local function CreateBox(player)
     ESPBoxes[player] = Box
 
     local function UpdateBox()
-        if Toggles.ToggleBoxes.Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Team ~= game.Players.LocalPlayer.Team then
+        if Tabs.Visuals:GetOption('ToggleBoxes').Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local rootPart = player.Character.HumanoidRootPart
             local rootPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
             if onScreen then
@@ -188,7 +209,7 @@ end
 
 -- Function to handle ESP for players
 local function DrawBoxes()
-    if Toggles.ToggleBoxes.Value then
+    if Tabs.Visuals:GetOption('ToggleBoxes').Value then
         for _, player in pairs(game:GetService('Players'):GetPlayers()) do
             if player.Character and not ESPBoxes[player] then
                 CreateBox(player)
@@ -208,50 +229,30 @@ local function RemoveAllBoxes()
 end
 
 -- Toggle to handle ESP on/off
-Toggles.ToggleBoxes:OnChanged(function()
-    if Toggles.ToggleBoxes.Value then
-        print('[Visuals] Box ESP enabled')
-        DrawBoxes()
-    else
-        print('[Visuals] Box ESP disabled')
-        RemoveAllBoxes()
-    end
+Tabs.Visuals:GetOption('ToggleBoxes'):OnChanged(function()
+    if Tabs.Visuals:GetOption('ToggleBoxes’).Value then
+DrawBoxes()
+else
+RemoveAllBoxes()
+end
 end)
 
--- UI Settings
-local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+– UI Settings
+local LeftGroupBoxUI = Tabs[‘UI Settings’]:AddLeftGroupbox(‘UI Settings’)
 
-MenuGroup:AddButton('Unload', function() Library:Unload() end)
-
-MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'End', NoUI = true, Text = 'Menu Bind' })
-
-ThemeManager:ApplyToTab(Tabs['UI Settings'])
-
--- Miscellaneous Tab for FOV Slider
-local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox('Miscellaneous')
-
--- FOV Slider for Camera
-LeftGroupBoxMisc:AddSlider('CameraFOV', {
-    Text = 'Camera FOV',
-    Default = 90,
-    Min = 60,
-    Max = 120,
-    Suffix = '°',
-    Rounding = 0,
-    Compact = false,
-    HideMax = false,
-    Tooltip = 'Adjust the camera field of view',
-    Callback = function(Value)
-        game.Workspace.CurrentCamera.FieldOfView = Value
-        print('[Misc] Camera FOVset to:’, Value)
+LeftGroupBoxUI:AddColorPicker(‘MainColor’, {
+Text = ‘Main Color’,
+Default = Color3.fromRGB(255, 0, 0),
+Callback = function(Color)
+Library:SetTheme(‘Main’, Color)
 end
 })
 
-– Ensure the menu is visible
-Window:Show()
+– Theme Management
+local function UpdateTheme()
+local theme = Tabs[‘UI Settings’]:GetOption(‘MainColor’).Value
+ThemeManager:ApplyTheme(‘Main’, theme)
+end
 
-– Debug message
-print(“Menu loaded successfully.”)
-
-
-            
+– Update theme when color picker changes
+Tabs[‘UI Settings’]:GetOption(‘MainColor’):OnChanged(UpdateTheme)
