@@ -17,11 +17,11 @@ local Window = Library:CreateWindow({
 })
 
 local Tabs = {
-    Main = Window:AddTab('Main'),
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
-    ['UI Settings'] = Window:AddTab('UI Settings'),
-    Misc = Window:AddTab('Misc')
+     Misc = Window:AddTab('Misc'),
+    ['UI Settings'] = Window:AddTab('UI Settings')
+   
 }
 
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
