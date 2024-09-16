@@ -19,7 +19,7 @@ local Tabs = {
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
     Misc = Window:AddTab('Misc'),  -- New Misc Tab
-    ['UI Settings'] = Window:AddTab('UI Settings'),
+    ['UI Settings'] = Window:AddTab('UI Settings')
 }
 
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
