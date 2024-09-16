@@ -1,16 +1,6 @@
 
--- Configuration Variables
-getgenv().whscript = "Remedy"  -- Change to the name of your script
-getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1285032038851805206/qyoaaeRne2zzt5MgGOLQMOXNJ9R3-NImr7M5pq4BsyDLjlVFC5TqUEU6gC4fkiXKkUKC"  -- Put your Webhook URL here
-getgenv().ExecLogSecret = true  -- Toggle for secret logging
 
--- Function to load and execute remote script
-local function loadRemoteScript(url)
-    local http = game:GetService("HttpService")
-    local scriptContent = http:GetAsync(url)
-    loadstring(scriptContent)()
-end
-
+-- Load necessary libraries
 -- Load necessary libraries
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
@@ -19,7 +9,7 @@ local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
 local Window = Library:CreateWindow({
-    Title = 'Remedy.ez Private',
+    Title = 'Example Menu',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -27,9 +17,11 @@ local Window = Library:CreateWindow({
 })
 
 local Tabs = {
+    Main = Window:AddTab('Main'),
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
     ['UI Settings'] = Window:AddTab('UI Settings'),
+    Misc = Window:AddTab('Misc')
 }
 
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
@@ -47,9 +39,10 @@ LeftGroupBoxAim:AddToggle('AimbotToggle', {
 LeftGroupBoxAim:AddToggle('ShowFOV', {
     Text = 'Show FOV Circle',
     Default = false,
-    Tooltip = 'Shows the FOV circle for aimbot',
+    Tooltip = 'Shows the FOV circle around the cursor',
     Callback = function(Value)
         print('[Aimbot] Show FOV:', Value)
+        FOVCircle.Visible = Value
     end
 })
 
@@ -85,6 +78,23 @@ LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
     end
 })
 
+-- Camera FOV Slider
+Tabs.Misc:AddLeftGroupbox('Camera Settings'):AddSlider('CameraFOV', {
+    Text = 'Camera FOV',
+    Default = 90,
+    Min = 60,
+    Max = 120,
+    Suffix = '°',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the camera field of view',
+    Callback = function(Value)
+        game.Workspace.CurrentCamera.FieldOfView = Value
+        print('[Misc] Camera FOV set to:', Value)
+    end
+})
+
 -- FOV Circle Drawing
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
@@ -96,29 +106,35 @@ FOVCircle.Visible = false
 local function UpdateFOV()
     local mouse = game.Players.LocalPlayer:GetMouse()
     FOVCircle.Position = Vector2.new(mouse.X, mouse.Y)
-    FOVCircle.Radius = Options.FOVSize.Value
-    FOVCircle.Visible = Toggles.ShowFOV.Value
+    FOVCircle.Radius = LeftGroupBoxAim:FindFirstChild('FOVSize').Value
 end
 
 -- Aimbot Logic (with FOV and Smoothness)
 local function Aimbot()
-    if not Toggles.AimbotToggle.Value then return end
+    if not LeftGroupBoxAim:FindFirstChild('AimbotToggle').Value then return end
 
     local camera = game.Workspace.CurrentCamera
     local localPlayer = game.Players.LocalPlayer
     local closestPlayer = nil
     local shortestDistance = math.huge
+    local mouse = game.Players.LocalPlayer:GetMouse()
+    local fovRadius = LeftGroupBoxAim:FindFirstChild('FOVSize').Value
 
     for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 and player.Team ~= localPlayer.Team then
-            local playerPos = player.Character.HumanoidRootPart.Position
-            local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
+        if player ~= localPlayer and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 then
+            local playerTeam = player.Team
+            local localPlayerTeam = localPlayer.Team
+            if playerTeam and localPlayerTeam and playerTeam == localPlayerTeam then
+                -- Only aim at players on the opposite team
+                local playerPos = player.Character.HumanoidRootPart.Position
+                local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
 
-            if onScreen then
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                if (not Toggles.ShowFOV.Value or distance < Options.FOVSize.Value) and distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player
+                if onScreen then
+                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+                    if distance < fovRadius and distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = player
+                    end
                 end
             end
         end
@@ -127,7 +143,7 @@ local function Aimbot()
     if closestPlayer then
         local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
         local currentPosition = camera.CFrame.Position
-        local newPosition = currentPosition:Lerp(targetPosition, Options.AimbotSmoothness.Value / 100)
+        local newPosition = currentPosition:Lerp(targetPosition, LeftGroupBoxAim:FindFirstChild('AimbotSmoothness').Value / 100)
 
         camera.CFrame = CFrame.new(newPosition, closestPlayer.Character.HumanoidRootPart.Position)
         print('[Aimbot] Aiming at', closestPlayer.Name)
@@ -135,8 +151,8 @@ local function Aimbot()
 end
 
 -- Continuously check for the aimbot toggle and execute logic
-Toggles.AimbotToggle:OnChanged(function()
-    if Toggles.AimbotToggle.Value then
+LeftGroupBoxAim:FindFirstChild('AimbotToggle').OnChanged(function()
+    if LeftGroupBoxAim:FindFirstChild('AimbotToggle').Value then
         print('[Aimbot] Aimbot activated')
         game:GetService('RunService').Stepped:Connect(Aimbot)
     else
@@ -173,7 +189,7 @@ local function CreateBox(player)
     ESPBoxes[player] = Box
 
     local function UpdateBox()
-        if Toggles.ToggleBoxes.Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+        if LeftGroupBoxVisuals:FindFirstChild('ToggleBoxes').Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local rootPart = player.Character.HumanoidRootPart
             local rootPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
             if onScreen then
@@ -202,7 +218,7 @@ end
 
 -- Function to handle ESP for players
 local function DrawBoxes()
-    if Toggles.ToggleBoxes.Value then
+    if LeftGroupBoxVisuals:FindFirstChild('ToggleBoxes').Value then
         for _, player in pairs(game:GetService('Players'):GetPlayers()) do
             if player.Character and not ESPBoxes[player] then
                 CreateBox(player)
@@ -217,29 +233,18 @@ local function RemoveAllBoxes()
         if box then
             box:Remove()
         end
-        ESPBoxes[player] = nil
-    end
+        ESPBoxes[player] =nil
+end
 end
 
--- Toggle to handle ESP on/off
-Toggles.ToggleBoxes:OnChanged(function()
-    if Toggles.ToggleBoxes.Value then
-        print('[Visuals] Box ESP enabled')
-        DrawBoxes()
-    else
-        print('[Visuals] Box ESP disabled')
-        RemoveAllBoxes()
-    end
+– Monitor players and update ESP boxes
+game:GetService(‘Players’).PlayerAdded:Connect(function(player)
+player.CharacterAdded:Connect(function()
+DrawBoxes()
+end)
 end)
 
--- UI Settings
-local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+game:GetService(‘Players’).PlayerRemoving:Connect(RemoveAllBoxes)
 
-MenuGroup:AddButton('Unload', function() Library:Unload() end)
-
-MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'End', NoUI = true, Text = 'Menu Bind' })
-
-ThemeManager:ApplyToTab(Tabs['UI Settings'])
-
--- Initialize
-print('[Menu] Script loaded and initialized successfully.')
+– Update FOV Circle continuously
+game:GetService(‘RunService’).RenderStepped:Connect(UpdateFOV)
