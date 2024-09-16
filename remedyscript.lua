@@ -1,6 +1,3 @@
-
-
--- Load necessary libraries
 -- Load necessary libraries
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
@@ -8,21 +5,30 @@ local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
+-- Debug message
+print("Loading menu...")
+
 local Window = Library:CreateWindow({
-    Title = 'Remedy.ez Private',
+    Title = 'Example Menu',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
     MenuFadeTime = 0.2
 })
 
+-- Debug message
+print("Menu created.")
+
 local Tabs = {
+    Main = Window:AddTab('Main'),
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
-     Misc = Window:AddTab('Misc'),
-    ['UI Settings'] = Window:AddTab('UI Settings')
-   
+    ['UI Settings'] = Window:AddTab('UI Settings'),
+    Misc = Window:AddTab('Misc')
 }
+
+-- Debug message
+print("Tabs created.")
 
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
@@ -189,62 +195,41 @@ local function CreateBox(player)
     ESPBoxes[player] = Box
 
     local function UpdateBox()
-        if LeftGroupBoxVisuals:FindFirstChild('ToggleBoxes').Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local rootPart = player.Character.HumanoidRootPart
-            local rootPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-            if onScreen then
-                local sizeY = (game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, 3, 0)).p) - game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, -3, 0)).p)).Magnitude
-                local sizeX = sizeY * 0.6
-                Box.Size = Vector2.new(sizeX, sizeY)
-                Box.Position = Vector2.new(rootPos.X - Box.Size.X / 2, rootPos.Y - Box.Size.Y / 2)
-                Box.Visible = player.Team ~= game.Players.LocalPlayer.Team
-            else
-                Box.Visible = false
-            end
-        else
-            Box.Visible = false
-        end
-    end
-
-    game:GetService("RunService").RenderStepped:Connect(UpdateBox)
-
-    player.CharacterRemoving:Connect(function()
-        if ESPBoxes[player] then
-            ESPBoxes[player]:Remove()
-            ESPBoxes[player] = nil
-        end
-    end)
+        if LeftGroupBoxVisuals:FindFirstChild('ToggleBoxes').Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+then
+local camera = game.Workspace.CurrentCamera
+local position, onScreen = camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+if onScreen then
+Box.Visible = true
+Box.Size = Vector2.new(100, 100)  – Adjust as needed
+Box.Position = Vector2.new(position.X - Box.Size.X / 2, position.Y - Box.Size.Y / 2)
+else
+Box.Visible = false
+end
+else
+Box.Visible = false
+end
 end
 
--- Function to handle ESP for players
-local function DrawBoxes()
-    if LeftGroupBoxVisuals:FindFirstChild('ToggleBoxes').Value then
-        for _, player in pairs(game:GetService('Players'):GetPlayers()) do
-            if player.Character and not ESPBoxes[player] then
-                CreateBox(player)
-            end
-        end
-    end
-end
+game:GetService('RunService').RenderStepped:Connect(UpdateBox)
 
--- Function to remove all ESP boxes
-local function RemoveAllBoxes()
-    for player, box in pairs(ESPBoxes) do
-        if box then
-            box:Remove()
-        end
-        ESPBoxes[player] =nil
-end
 end
 
 – Monitor players and update ESP boxes
 game:GetService(‘Players’).PlayerAdded:Connect(function(player)
 player.CharacterAdded:Connect(function()
-DrawBoxes()
+CreateBox(player)
 end)
 end)
 
-game:GetService(‘Players’).PlayerRemoving:Connect(RemoveAllBoxes)
+game:GetService(‘Players’).PlayerRemoving:Connect(function(player)
+if ESPBoxes[player] then
+ESPBoxes[player]:Remove()
+ESPBoxes[player] = nil
+end
+end)
 
 – Update FOV Circle continuously
 game:GetService(‘RunService’).RenderStepped:Connect(UpdateFOV)
+
+            
