@@ -16,6 +16,7 @@ local Tabs = {
     Main = Window:AddTab('Main'),
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
+    Misc = Window:AddTab('Misc'),  -- New Misc Tab
     ['UI Settings'] = Window:AddTab('UI Settings'),
 }
 
@@ -40,7 +41,6 @@ LeftGroupBoxAim:AddToggle('ShowFOV', {
     end
 })
 
--- FOV Size Slider
 LeftGroupBoxAim:AddSlider('FOVSize', {
     Text = 'FOV Size',
     Default = 100,
@@ -56,7 +56,6 @@ LeftGroupBoxAim:AddSlider('FOVSize', {
     end
 })
 
--- Aimbot Smoothness Slider
 LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
     Text = 'Aimbot Smoothness',
     Default = 5,
@@ -90,9 +89,37 @@ end
 
 game:GetService('RunService').RenderStepped:Connect(UpdateFOV)
 
--- Aimbot Logic (with FOV and Smoothness)
+-- Check if the target is visible using raycasting
+local function IsVisible(targetPart)
+    local origin = game.Workspace.CurrentCamera.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character} -- Ignore local player
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local ray = game.Workspace:Raycast(origin, direction, raycastParams)
+
+    return ray == nil -- If no obstruction, target is visible
+end
+
+-- Detect Right-Click Hold
+local UserInputService = game:GetService('UserInputService')
+local rightClickHeld = false
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = false
+    end
+end)
+
+-- Aimbot Logic (with FOV, Smoothness, Visibility, and Right Click)
 local function Aimbot()
-    if not Toggles.AimbotToggle.Value then return end
+    if not Toggles.AimbotToggle.Value or not rightClickHeld then return end
 
     local camera = game.Workspace.CurrentCamera
     local localPlayer = game.Players.LocalPlayer
@@ -100,15 +127,18 @@ local function Aimbot()
     local shortestDistance = math.huge
 
     for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 and player.Team ~= localPlayer.Team then
-            local playerPos = player.Character.HumanoidRootPart.Position
-            local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
+        if player ~= localPlayer and player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 then
+            local targetPart = player.Character:FindFirstChild("HumanoidRootPart")
+            if targetPart and IsVisible(targetPart) then
+                local playerPos = targetPart.Position
+                local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
 
-            if onScreen then
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                if (not Toggles.ShowFOV.Value or distance < Options.FOVSize.Value) and distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player
+                if onScreen then
+                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
+                    if (not Toggles.ShowFOV.Value or distance < Options.FOVSize.Value) and distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = player
+                    end
                 end
             end
         end
@@ -124,20 +154,9 @@ local function Aimbot()
     end
 end
 
--- Continuously check for the aimbot toggle and execute logic
-Toggles.AimbotToggle:OnChanged(function()
-    if Toggles.AimbotToggle.Value then
-        print('[Aimbot] Aimbot activated')
-        game:GetService('RunService').Stepped:Connect(Aimbot)
-    else
-        print('[Aimbot] Aimbot deactivated')
-    end
-end)
-
 -- ESP Section
 local LeftGroupBoxVisuals = Tabs.Visuals:AddLeftGroupbox('Visuals Settings')
 
--- Visuals Toggle for boxes around enemies
 LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
     Text = 'Toggle Enemy Boxes (ESP)',
     Default = false,
@@ -147,17 +166,15 @@ LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
     end
 })
 
--- ESP Boxes
 local ESPBoxes = {}
 
--- Function to create ESP boxes around players
 local function CreateBox(player)
     if not player.Character then return end
 
     local Box = Drawing.new("Square")
     Box.Thickness = 2
     Box.Transparency = 1
-    Box.Color = Color3.fromRGB(255, 0, 0) -- Red for enemies
+    Box.Color = Color3.fromRGB(255, 0, 0)
     Box.Filled = false
     
     ESPBoxes[player] = Box
@@ -182,6 +199,11 @@ local function CreateBox(player)
 
     game:GetService("RunService").RenderStepped:Connect(UpdateBox)
 
+    -- Update ESP after respawn
+    player.CharacterAdded:Connect(function(character)
+        ESPBoxes[player] = Box
+    end)
+
     player.CharacterRemoving:Connect(function()
         if ESPBoxes[player] then
             ESPBoxes[player]:Remove()
@@ -190,46 +212,77 @@ local function CreateBox(player)
     end)
 end
 
--- Function to handle ESP for players
 local function DrawBoxes()
     if Toggles.ToggleBoxes.Value then
         for _, player in pairs(game:GetService('Players'):GetPlayers()) do
-            if player.Character and not ESPBoxes[player] then
+            if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
                 CreateBox(player)
             end
-        end
+                end
+else
+    for _, box in pairs(ESPBoxes) do
+        box:Remove()
     end
+    ESPBoxes = {}
+end
+        end
+else
+    for _, box in pairs(ESPBoxes) do
+        box:Remove()
+    end
+    ESPBoxes = {}
 end
 
--- Function to remove all ESP boxes
-local function RemoveAllBoxes()
-    for player, box in pairs(ESPBoxes) do
-        if box then
-            box:Remove()
-        end
-        ESPBoxes[player] = nil
-    end
 end
 
--- Toggle to handle ESP on/off
-Toggles.ToggleBoxes:OnChanged(function()
-    if Toggles.ToggleBoxes.Value then
-        print('[Visuals] Box ESP enabled')
-        DrawBoxes()
-    else
-        print('[Visuals] Box ESP disabled')
-        RemoveAllBoxes()
-    end
+Toggles.ToggleBoxes:OnChanged(DrawBoxes)
+
+game.Players.PlayerAdded:Connect(function(player)
+player.CharacterAdded:Connect(function()
+if Toggles.ToggleBoxes.Value then
+CreateBox(player)
+end
+end)
 end)
 
--- UI Settings
-local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+game.Players.PlayerRemoving:Connect(function(player)
+if ESPBoxes[player] then
+ESPBoxes[player]:Remove()
+ESPBoxes[player] = nil
+end
+end)
 
-MenuGroup:AddButton('Unload', function() Library:Unload() end)
+– Misc Tab - Camera FOV Slider
+local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox(‘Miscellaneous’)
 
-MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'End', NoUI = true, Text = 'Menu Bind' })
+LeftGroupBoxMisc:AddSlider(‘CameraFOV’, {
+Text = ‘Camera FOV’,
+Default = 70,
+Min = 60,
+Max = 120,
+Suffix = ‘°’,
+Rounding = 0,
+Tooltip = ‘Adjust the field of view for the camera’,
+Callback = function(Value)
+game.Workspace.CurrentCamera.FieldOfView = Value
+print(’[Misc] Camera FOV set to:’, Value)
+end
+})
 
-ThemeManager:ApplyToTab(Tabs['UI Settings'])
+– UI Settings
+local MenuGroup = Tabs[‘UI Settings’]:AddLeftGroupbox(‘Menu’)
 
--- Initialize
-print('[Menu] Script loaded and initialized successfully.')
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+
+ThemeManager:SetFolder(‘MyScriptHub’)
+SaveManager:SetFolder(‘MyScriptHub/specific-game’)
+
+SaveManager:BuildConfigSection(Tabs[‘UI Settings’])
+
+ThemeManager:ApplyToTab(Tabs[‘UI Settings’])
+
+– ESP Box Constantly Updated
+game:GetService(“RunService”).RenderStepped:Connect(Aimbot)
