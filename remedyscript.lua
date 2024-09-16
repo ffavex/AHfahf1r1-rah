@@ -6,7 +6,7 @@ local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
 local Window = Library:CreateWindow({
-    Title = 'Remedy.ez | Private User',
+    Title = 'Example Menu',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -22,22 +22,13 @@ local Tabs = {
 
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
--- Aimbot Toggles
+-- Aimbot Toggle
 LeftGroupBoxAim:AddToggle('AimbotToggle', {
     Text = 'Enable Aimbot',
     Default = false,
     Tooltip = 'Enable or disable aimbot',
     Callback = function(Value)
         print('[Aimbot] Aimbot enabled:', Value)
-    end
-})
-
-LeftGroupBoxAim:AddToggle('ShowFOV', {
-    Text = 'Show FOV Circle',
-    Default = false,
-    Tooltip = 'Shows the FOV circle for aimbot',
-    Callback = function(Value)
-        print('[Aimbot] Show FOV:', Value)
     end
 })
 
@@ -55,24 +46,6 @@ LeftGroupBoxAim:AddSlider('FOVSize', {
     Callback = function(Value)
         print('[Aimbot] FOV Size:', Value)
         UpdateFOV() -- Update FOV circle size
-    end
-})
-
--- Camera FOV Slider
-LeftGroupBoxAim:AddSlider('CameraFOV', {
-    Text = 'Camera FOV',
-    Default = 70,
-    Min = 30,
-    Max = 120,
-    Suffix = '°',
-    Rounding = 0,
-    Compact = false,
-    HideMax = false,
-    Tooltip = 'Adjust the camera field of view',
-    Callback = function(Value)
-        local camera = game.Workspace.CurrentCamera
-        camera.FieldOfView = Value
-        print('[Camera] FOV set to:', Value)
     end
 })
 
@@ -107,51 +80,94 @@ local function UpdateFOV()
     FOVCircle.Visible = Tabs.Aim:GetOption('ShowFOV').Value
 end
 
--- Aimbot Logic (with FOV and Smoothness)
-local function Aimbot()
-    if not Tabs.Aim:GetOption('AimbotToggle').Value then return end
+-- New Aimbot Logic
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-    local camera = game.Workspace.CurrentCamera
-    local localPlayer = game.Players.LocalPlayer
-    local closestPlayer = nil
-    local shortestDistance = math.huge
+local Target = nil
+local RightClickHeld = false
 
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 and player.Team ~= localPlayer.Team then
-            local playerPos = player.Character.HumanoidRootPart.Position
-            local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
+local function IsOppositeTeam(Player)
+    return Player.Team ~= LocalPlayer.Team
+end
 
-            if onScreen then
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                if (not Tabs.Aim:GetOption('ShowFOV').Value or distance < Tabs.Aim:GetOption('FOVSize').Value) and distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player
+local function IsVisible(Part)
+    local ScreenPos, OnScreen = Camera:WorldToViewportPoint(Part.Position)
+    
+    if OnScreen then
+        local RayOrigin = Camera.CFrame.Position
+        local Direction = (Part.Position - RayOrigin).unit
+        local Ray = Ray.new(RayOrigin, Direction * 5000)
+        
+        local HitPart = workspace:FindPartOnRay(Ray, LocalPlayer.Character, false, true)
+        return HitPart and HitPart:IsDescendantOf(Part.Parent)
+    end
+    
+    return false
+end
+
+local function GetClosestPlayer()
+    local ClosestPlayer = nil
+    local ClosestDistance = math.huge
+
+    for _, Player in pairs(Players:GetPlayers()) do
+        if Player ~= LocalPlayer and IsOppositeTeam(Player) and Player.Character and Player.Character:FindFirstChild("Head") then
+            local Head = Player.Character.Head
+            local ScreenPos, OnScreen = Camera:WorldToViewportPoint(Head.Position)
+
+            if OnScreen and IsVisible(Head) then
+                local MousePos = UserInputService:GetMouseLocation()
+                local Distance = (Vector2.new(ScreenPos.X, ScreenPos.Y) - MousePos).magnitude
+                
+                if Distance < ClosestDistance then
+                    ClosestDistance = Distance
+                    ClosestPlayer = Player
                 end
             end
         end
     end
+    
+    return ClosestPlayer
+end
 
-    if closestPlayer then
-        local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
-        local currentPosition = camera.CFrame.Position
-        local newPosition = currentPosition:Lerp(targetPosition, Tabs.Aim:GetOption('AimbotSmoothness').Value / 100)
-
-        camera.CFrame = CFrame.new(newPosition, closestPlayer.Character.HumanoidRootPart.Position)
-        print('[Aimbot] Aiming at', closestPlayer.Name)
+local function LockOntoPlayer(Player)
+    if Player and Player.Character and Player.Character:FindFirstChild("Head") then
+        local Head = Player.Character.Head
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, Head.Position)
     end
 end
 
--- Continuously check for the aimbot toggle and execute logic
-Tabs.Aim:GetOption('AimbotToggle'):OnChanged(function()
-    if Tabs.Aim:GetOption('AimbotToggle').Value then
-        print('[Aimbot] Aimbot activated')
-        game:GetService('RunService').Stepped:Connect(Aimbot)
-    else
-        print('[Aimbot] Aimbot deactivated')
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        RightClickHeld = true
     end
 end)
 
--- ESP Section
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        RightClickHeld = false
+        Target = nil
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Tabs.Aim:GetOption('AimbotToggle').Value then
+        if RightClickHeld then
+            if not Target or not Target.Character or not Target.Character:FindFirstChild("Head") or not IsVisible(Target.Character.Head) then
+                Target = GetClosestPlayer()
+            end
+
+            if Target then
+                LockOntoPlayer(Target)
+            end
+        end
+    end
+end)
+
+-- Visuals Section
 local LeftGroupBoxVisuals = Tabs.Visuals:AddLeftGroupbox('Visuals Settings')
 
 -- Visuals Toggle for boxes around enemies
@@ -167,14 +183,13 @@ LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
 -- ESP Boxes
 local ESPBoxes = {}
 
--- Function to create ESP boxes around players
 local function CreateBox(player)
     if not player.Character then return end
 
     local Box = Drawing.new("Square")
     Box.Thickness = 2
     Box.Transparency = 1
-    Box.Color = Color3.fromRGB(255, 0, 0) -- Red for enemies
+    Box.Color = Color3.fromRGB(255, 0, 0)
     Box.Filled = false
     
     ESPBoxes[player] = Box
@@ -207,7 +222,6 @@ local function CreateBox(player)
     end)
 end
 
--- Function to handle ESP for players
 local function DrawBoxes()
     if Tabs.Visuals:GetOption('ToggleBoxes').Value then
         for _, player in pairs(game:GetService('Players'):GetPlayers()) do
@@ -218,7 +232,6 @@ local function DrawBoxes()
     end
 end
 
--- Function to remove all ESP boxes
 local function RemoveAllBoxes()
     for player, box in pairs(ESPBoxes) do
         if box then
@@ -228,31 +241,28 @@ local function RemoveAllBoxes()
     end
 end
 
--- Toggle to handle ESP on/off
 Tabs.Visuals:GetOption('ToggleBoxes'):OnChanged(function()
-    if Tabs.Visuals:GetOption('ToggleBoxes’).Value then
-DrawBoxes()
-else
-RemoveAllBoxes()
-end
+    if Tabs.Visuals:GetOption('ToggleBoxes').Value then
+        DrawBoxes()
+    else
+        RemoveAllBoxes()
+    end
 end)
 
-– UI Settings
-local LeftGroupBoxUI = Tabs[‘UI Settings’]:AddLeftGroupbox(‘UI Settings’)
+-- UI Settings
+local LeftGroupBoxUI = Tabs['UI Settings']:AddLeftGroupbox('UI Settings')
 
-LeftGroupBoxUI:AddColorPicker(‘MainColor’, {
-Text = ‘Main Color’,
-Default = Color3.fromRGB(255, 0, 0),
-Callback = function(Color)
-Library:SetTheme(‘Main’, Color)
-end
+LeftGroupBoxUI:AddColorPicker('MainColor', {
+    Text = 'Main Color',
+    Default = Color3.fromRGB(255, 0, 0),
+    Callback = function(Color)
+        Library:SetTheme('Main', Color)
+    end
 })
 
-– Theme Management
 local function UpdateTheme()
-local theme = Tabs[‘UI Settings’]:GetOption(‘MainColor’).Value
-ThemeManager:ApplyTheme(‘Main’, theme)
-end
+    local theme = Tabs['UI Settings']:GetOption('MainColor').Value
+ThemeManager:ApplyTheme('Main', theme)
+    end
 
-– Update theme when color picker changes
 Tabs[‘UI Settings’]:GetOption(‘MainColor’):OnChanged(UpdateTheme)
