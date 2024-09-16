@@ -1,16 +1,4 @@
 
-getgenv().keysystem = true
-getgenv().key = "Valorized", "Oliver"                         -- (can also use HttpGet or Loadstring to load the key details for example from a unlisted paste)
-getgenv().keylink = "url to obtain key"
-
---[[GAME CHECK]]--
-getgenv().gamechecker = false                                      --game placeid checker on/off (true/false)
-getgenv().ScriptName = "Remedy.ez"                              
-
--- Loader
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/venoxhh/LoaderV1/main/Loader.lua")))()
-
-
 
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
