@@ -1,4 +1,3 @@
-he
 
 -- Configuration Variables
 getgenv().whscript = "Remedy"  -- Change to the name of your script
