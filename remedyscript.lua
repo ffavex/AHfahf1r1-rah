@@ -15,7 +15,7 @@ local Window = Library:CreateWindow({
 local Tabs = {
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
-    Misc = Window:AddTab('Misc'),  -- New Misc Tab
+    Misc = Window:AddTab('Misc'),
     ['UI Settings'] = Window:AddTab('UI Settings'),
 }
 
@@ -56,6 +56,25 @@ LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
     Compact = false,
     HideMax = false,
     Tooltip = 'Controls how smooth the aimbot snaps to targets',
+})
+
+-- Misc Tab and FOV Slider
+local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox('Misc Settings')
+
+LeftGroupBoxMisc:AddSlider('CameraFOV', {
+    Text = 'Camera FOV',
+    Default = 70,
+    Min = 10,
+    Max = 120,
+    Suffix = '°',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the camera field of view',
+    Callback = function(value)
+        local Camera = workspace.CurrentCamera
+        Camera.FieldOfView = value
+    end,
 })
 
 -- FOV Circle Drawing
@@ -134,9 +153,8 @@ local function Aimbot()
     if closestPlayer then
         local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
         local currentPosition = camera.CFrame.Position
-        local newPosition = currentPosition:Lerp(targetPosition, Options.AimbotSmoothness.Value / 100)
-
-        camera.CFrame = CFrame.new(newPosition, closestPlayer.Character.HumanoidRootPart.Position)
+        local targetCFrame = CFrame.new(currentPosition, targetPosition)
+        camera.CFrame = CFrame.new(currentPosition:Lerp(targetCFrame.Position, Options.AimbotSmoothness.Value / 100), targetPosition)
     end
 end
 
@@ -152,6 +170,8 @@ LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
 })
 
 local ESPBoxes = {}
+local UpdateInterval = 0.1 -- Time in seconds between updates
+local lastUpdateTime = tick()
 
 local function CreateBox(player)
     if not player.Character then return end
@@ -161,7 +181,7 @@ local function CreateBox(player)
     Box.Transparency = 1
     Box.Color = Color3.fromRGB(255, 0, 0)
     Box.Filled = false
-    
+
     ESPBoxes[player] = Box
 
     local function UpdateBox()
@@ -198,15 +218,21 @@ local function CreateBox(player)
 end
 
 local function DrawBoxes()
-    if Toggles.ToggleBoxes.Value then
-        for _, player in pairs(game:GetService('Players'):GetPlayers()) do
-            if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
-                CreateBox(player)
+    local currentTime = tick()
+    if currentTime - lastUpdateTime >= UpdateInterval then
+        lastUpdateTime = currentTime
+        if Toggles.ToggleBoxes.Value then
+            for _, player in pairs(game:GetService('Players'):GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
+                    if not ESPBoxes[player] then
+                        CreateBox(player)
+                    end
+                end
             end
-        end
-    else
-        for _, box in pairs(ESPBoxes) do
-            box.Visible = false
+        else
+            for _, box in pairs(ESPBoxes) do
+                box.Visible = false
+            end
         end
     end
 end
