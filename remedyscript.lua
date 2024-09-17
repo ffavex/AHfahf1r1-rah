@@ -9,6 +9,7 @@ else
     print("External script executed successfully.")
 end
 
+-- Import LinoriaLib components from GitHub
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
 -- Load LinoriaLib components
@@ -16,7 +17,7 @@ local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
--- Create Window
+-- Create the main window
 local Window = Library:CreateWindow({
     Title = 'Remedy.ez | Private User',
     Center = true,
@@ -25,7 +26,7 @@ local Window = Library:CreateWindow({
     MenuFadeTime = 0.2
 })
 
--- Create Tabs
+-- Define Tabs
 local Tabs = {
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
@@ -33,20 +34,25 @@ local Tabs = {
     ['UI Settings'] = Window:AddTab('UI Settings'),
 }
 
--- Aimbot Settings
+-- Add Aim settings to the Aim tab
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
--- Aimbot Toggles
 LeftGroupBoxAim:AddToggle('AimbotToggle', {
     Text = 'Enable Aimbot',
     Default = false,
     Tooltip = 'Enable or disable aimbot',
+    Callback = function(Value)
+        print('[cb] Aimbot Toggle changed to:', Value)
+    end
 })
 
 LeftGroupBoxAim:AddToggle('ShowFOV', {
     Text = 'Show FOV Circle',
     Default = false,
     Tooltip = 'Shows the FOV circle for aimbot',
+    Callback = function(Value)
+        print('[cb] Show FOV changed to:', Value)
+    end
 })
 
 LeftGroupBoxAim:AddSlider('FOVSize', {
@@ -56,9 +62,10 @@ LeftGroupBoxAim:AddSlider('FOVSize', {
     Max = 500,
     Suffix = 'px',
     Rounding = 0,
-    Compact = false,
-    HideMax = false,
     Tooltip = 'Adjust the size of the FOV for the aimbot',
+    Callback = function(Value)
+        print('[cb] FOV Size changed to:', Value)
+    end
 })
 
 LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
@@ -66,14 +73,13 @@ LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
     Default = 5,
     Min = 1,
     Max = 20,
-    Suffix = '',
-    Rounding = 1,
-    Compact = false,
-    HideMax = false,
     Tooltip = 'Controls how smooth the aimbot snaps to targets',
+    Callback = function(Value)
+        print('[cb] Aimbot Smoothness changed to:', Value)
+    end
 })
 
--- Misc Settings
+-- Add Misc settings to the Misc tab
 local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox('Misc Settings')
 
 LeftGroupBoxMisc:AddSlider('CameraFOV', {
@@ -83,25 +89,27 @@ LeftGroupBoxMisc:AddSlider('CameraFOV', {
     Max = 120,
     Suffix = '°',
     Rounding = 0,
-    Compact = false,
-    HideMax = false,
     Tooltip = 'Adjust the camera field of view',
-    Callback = function(value)
+    Callback = function(Value)
         local Camera = workspace.CurrentCamera
-        Camera.FieldOfView = value
-    end,
+        Camera.FieldOfView = Value
+        print('[cb] Camera FOV changed to:', Value)
+    end
 })
 
--- Visuals Settings
+-- Add Visual settings to the Visuals tab
 local LeftGroupBoxVisuals = Tabs.Visuals:AddLeftGroupbox('Visuals Settings')
 
 LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
     Text = 'Toggle Enemy Boxes (ESP)',
     Default = false,
     Tooltip = 'Draw boxes around enemies',
+    Callback = function(Value)
+        print('[cb] Toggle Boxes changed to:', Value)
+    end
 })
 
--- Variables for Settings
+-- Initialize Toggles and Options
 local Toggles = {
     AimbotToggle = LeftGroupBoxAim:GetToggle('AimbotToggle'),
     ShowFOV = LeftGroupBoxAim:GetToggle('ShowFOV'),
@@ -122,7 +130,7 @@ FOVCircle.Color = Color3.fromRGB(0, 255, 0)
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
--- Update the FOV Circle around the mouse
+-- Update the FOV Circle
 local function UpdateFOV()
     local mouse = game.Players.LocalPlayer:GetMouse()
     FOVCircle.Position = Vector2.new(mouse.X, mouse.Y + 36) -- Adjust for mouse position
@@ -140,7 +148,6 @@ local function IsVisible(targetPart)
     raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character} -- Ignore local player
     raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
     local ray = game.Workspace:Raycast(origin, direction, raycastParams)
-
     return ray == nil -- If no obstruction, target is visible
 end
 
@@ -174,99 +181,86 @@ local function Aimbot()
             local targetPart = player.Character:FindFirstChild("HumanoidRootPart")
             if targetPart and IsVisible(targetPart) then
                 local playerPos = targetPart.Position
-                local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
+                local screenPos = camera:WorldToScreenPoint(playerPos)
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
 
-                if onScreen then
-                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                    if (not Toggles.ShowFOV.Value or distance < Options.FOVSize.Value) and distance < shortestDistance then
-                        shortestDistance = distance
-                        closestPlayer = player
-                    end
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
                 end
             end
         end
     end
 
     if closestPlayer then
-        local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
-        local currentPosition = camera.CFrame.Position
-        local targetCFrame = CFrame.new(currentPosition, targetPosition)
-        camera.CFrame = CFrame.new(currentPosition:Lerp(targetCFrame.Position, Options.AimbotSmoothness.Value / 100), targetPosition)
+        local targetPart = closestPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetPart then
+            local targetPos = camera:WorldToScreenPoint(targetPart.Position)
+            mousemoverel((targetPos.X - mouse.X) / Options.AimbotSmoothness.Value, (targetPos.Y - mouse.Y) / Options.AimbotSmoothness.Value)
+        end
     end
 end
 
 game:GetService('RunService').RenderStepped:Connect(Aimbot)
 
--- ESP Section
-local ESPBoxes = {}
-local UpdateInterval = 0.1 -- Time in seconds between updates
-local lastUpdateTime = tick()
+-- UI Settings
+local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
 
-local function CreateBox(player)
-    if not player.Character then return end
+MenuGroup:AddButton('Unload', function()
+    Library:Unload()
+end)
 
-    local Box = Drawing.new("Square")
-    Box.Thickness = 2
-    Box.Transparency = 1
-    Box.Color = Color3.fromRGB(66, 135, 245)
-    Box.Filled = false
+MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', {
+    Default = 'End',
+    NoUI = true,
+    Text = 'Menu keybind'
+})
 
-    ESPBoxes[player] = Box
+Library.ToggleKeybind = Options.MenuKeybind -- Set the keybind for the menu
 
-    local function UpdateBox()
-        if Toggles.ToggleBoxes.Value and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local rootPart = player.Character.HumanoidRootPart
-            local rootPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-            if onScreen then
-                local sizeY = (game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, 3, 0)).p) - game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, -3, 0)).p)).Magnitude
-                local sizeX = sizeY * 0.6
-                Box.Size = Vector2.new(sizeX, sizeY)
-                Box.Position = Vector2.new(rootPos.X - Box.Size.X / 2, rootPos.Y - Box.Size.Y / 2)
-                Box.Visible = player.Team ~= game.Players.LocalPlayer.Team
-            else
-                Box.Visible = false
-            end
-        else
-            Box.Visible = false
-        end
+-- Addons: Setup ThemeManager and SaveManager
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+-- Set folders for saving themes and configs
+ThemeManager:SetFolder('RemedyScript')
+SaveManager:SetFolder('RemedyScript/specific-game')
+
+-- Build config and theme menus
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+ThemeManager:ApplyToTab(Tabs['UI Settings'])
+
+-- Load auto-load config
+SaveManager:LoadAutoloadConfig()
+
+-- Set watermark visibility and dynamic update
+Library:SetWatermarkVisibility(true)
+
+local FrameTimer = tick()
+local FrameCounter = 0
+local FPS = 60
+
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+    FrameCounter += 1
+
+    if (tick() - FrameTimer) >= 1 then
+        FPS = FrameCounter
+        FrameTimer = tick()
+        FrameCounter = 0
     end
 
-    game:GetService("RunService").RenderStepped:Connect(UpdateBox)
+    Library:SetWatermark(('Remedy Softworks | %s fps | %s ms'):format(
+        math.floor(FPS),
+        math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+    ))
+end)
 
-    -- Update ESP after respawn
-    player.CharacterAdded:Connect(function(character)
-        ESPBoxes[player] = Box
-    end)
+Library:OnUnload(function()
+    WatermarkConnection:Disconnect()
+    print('Unloaded!')
+    Library.Unloaded = true
+end)
 
-    player.CharacterRemoving:Connect(function()
-        if ESPBoxes[player] then
-            ESPBoxes[player]:Remove()
-            ESPBoxes[player] = nil
-        end
-    end)
-end
-
-local function DrawBoxes()
-    local currentTime = tick()
-    if currentTime - lastUpdateTime >= UpdateInterval then
-        lastUpdateTime = currentTime
-        if Toggles.ToggleBoxes.Value then
-            for _, player in pairs(game:GetService('Players'):GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
-                    if not ESPBoxes[player] then
-                        CreateBox(player)
-                    end
-                end
-            end
-        else
-            for _, box in pairs(ESPBoxes) do
-                box.Visible = false
-            end
-        end
-    end
-end
-
-game:GetService('RunService').RenderStepped:Connect(DrawBoxes)
 
 -- Notification
 game:GetService("StarterGui"):SetCore("SendNotification", {
