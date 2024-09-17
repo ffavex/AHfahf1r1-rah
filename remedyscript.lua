@@ -9,6 +9,12 @@ else
     print("External script executed successfully.")
 end
 
+game:GetService("StarterGui"):SetCore("SendNotification",{
+	Title = "Remedy Softworks", -- Required
+	Text = "Thanks for Using Remedy Softworks", -- Required
+	Icon = "rbxassetid://113548811936137" -- Optional
+})
+
 -- Import LinoriaLib
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
@@ -17,7 +23,7 @@ local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
 -- Create the main window
 local Window = Library:CreateWindow({
-    Title = 'Remedy.ez | Private User',
+    Title = 'Remedy | Private User',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
