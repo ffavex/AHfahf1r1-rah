@@ -48,25 +48,9 @@ local function IsVisible(targetPart)
     return ray == nil -- If no obstruction, target is visible
 end
 
--- Detect Right-Click Hold
-local UserInputService = game:GetService('UserInputService')
-local rightClickHeld = false
-
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        rightClickHeld = true
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        rightClickHeld = false
-    end
-end)
-
--- Aimbot Logic (with Visibility, and Right Click)
+-- Aimbot Logic (with Visibility)
 local function Aimbot()
-    if not aimbotEnabled or not rightClickHeld then return end
+    if not aimbotEnabled then return end
 
     local camera = game.Workspace.CurrentCamera
     local localPlayer = game.Players.LocalPlayer
@@ -174,3 +158,9 @@ tab2.newToggle("ESP Toggle", "Enable or Disable ESP Boxes", false, function(togg
     espEnabled = toggleState
     UpdateESP()
 end)
+
+-- Ensure the UI shows up correctly
+tab1.newLabel("Aimbot and ESP Settings")
+
+-- Make sure ESP updates even if toggles are changed
+game:GetService("RunService").RenderStepped:Connect(UpdateESP)
