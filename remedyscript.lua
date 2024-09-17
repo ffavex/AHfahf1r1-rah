@@ -1,5 +1,4 @@
--- Import the library
-
+-- Import the external script
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua"))()
 end)
@@ -9,12 +8,14 @@ if not success then
 else
     print("External script executed successfully.")
 end
-local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
+-- Import LinoriaLib
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
+-- Create the main window
 local Window = Library:CreateWindow({
     Title = 'Remedy.ez | Private User',
     Center = true,
@@ -23,70 +24,75 @@ local Window = Library:CreateWindow({
     MenuFadeTime = 0.2
 })
 
+-- Create tabs
 local Tabs = {
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
     Misc = Window:AddTab('Misc'),
-    ['UI Settings'] = Window:AddTab('UI Settings'),
+    ['UI Settings'] = Window:AddTab('UI Settings')
 }
 
+-- Create Aimbot Settings
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
--- Aimbot Toggles
-LeftGroupBoxAim:AddToggle('AimbotToggle', {
-    Text = 'Enable Aimbot',
-    Default = false,
-    Tooltip = 'Enable or disable aimbot',
-})
+-- Define Toggles and Options
+local Toggles = {
+    AimbotToggle = LeftGroupBoxAim:AddToggle('AimbotToggle', {
+        Text = 'Enable Aimbot',
+        Default = false,
+        Tooltip = 'Enable or disable aimbot',
+    }),
+    ShowFOV = LeftGroupBoxAim:AddToggle('ShowFOV', {
+        Text = 'Show FOV Circle',
+        Default = false,
+        Tooltip = 'Shows the FOV circle for aimbot',
+    }),
+    ToggleBoxes = Tabs.Visuals:AddLeftGroupbox('Visuals Settings'):AddToggle('ToggleBoxes', {
+        Text = 'Toggle Enemy Boxes (ESP)',
+        Default = false,
+        Tooltip = 'Draw boxes around enemies',
+    })
+}
 
-LeftGroupBoxAim:AddToggle('ShowFOV', {
-    Text = 'Show FOV Circle',
-    Default = false,
-    Tooltip = 'Shows the FOV circle for aimbot',
-})
-
-LeftGroupBoxAim:AddSlider('FOVSize', {
-    Text = 'FOV Size',
-    Default = 100,
-    Min = 50,
-    Max = 500,
-    Suffix = 'px',
-    Rounding = 0,
-    Compact = false,
-    HideMax = false,
-    Tooltip = 'Adjust the size of the FOV for the aimbot',
-})
-
-LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
-    Text = 'Aimbot Smoothness',
-    Default = 5,
-    Min = 1,
-    Max = 20,
-    Suffix = '',
-    Rounding = 1,
-    Compact = false,
-    HideMax = false,
-    Tooltip = 'Controls how smooth the aimbot snaps to targets',
-})
-
--- Misc Tab and FOV Slider
-local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox('Misc Settings')
-
-LeftGroupBoxMisc:AddSlider('CameraFOV', {
-    Text = 'Camera FOV',
-    Default = 70,
-    Min = 10,
-    Max = 120,
-    Suffix = '°',
-    Rounding = 0,
-    Compact = false,
-    HideMax = false,
-    Tooltip = 'Adjust the camera field of view',
-    Callback = function(value)
-        local Camera = workspace.CurrentCamera
-        Camera.FieldOfView = value
-    end,
-})
+local Options = {
+    FOVSize = LeftGroupBoxAim:AddSlider('FOVSize', {
+        Text = 'FOV Size',
+        Default = 100,
+        Min = 50,
+        Max = 500,
+        Suffix = 'px',
+        Rounding = 0,
+        Compact = false,
+        HideMax = false,
+        Tooltip = 'Adjust the size of the FOV for the aimbot',
+    }),
+    AimbotSmoothness = LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
+        Text = 'Aimbot Smoothness',
+        Default = 5,
+        Min = 1,
+        Max = 20,
+        Suffix = '',
+        Rounding = 1,
+        Compact = false,
+        HideMax = false,
+        Tooltip = 'Controls how smooth the aimbot snaps to targets',
+    }),
+    CameraFOV = Tabs.Misc:AddLeftGroupbox('Misc Settings'):AddSlider('CameraFOV', {
+        Text = 'Camera FOV',
+        Default = 70,
+        Min = 10,
+        Max = 120,
+        Suffix = '°',
+        Rounding = 0,
+        Compact = false,
+        HideMax = false,
+        Tooltip = 'Adjust the camera field of view',
+        Callback = function(value)
+            local Camera = workspace.CurrentCamera
+            Camera.FieldOfView = value
+        end
+    })
+}
 
 -- FOV Circle Drawing
 local FOVCircle = Drawing.new("Circle")
@@ -172,14 +178,6 @@ end
 game:GetService('RunService').RenderStepped:Connect(Aimbot)
 
 -- ESP Section
-local LeftGroupBoxVisuals = Tabs.Visuals:AddLeftGroupbox('Visuals Settings')
-
-LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
-    Text = 'Toggle Enemy Boxes (ESP)',
-    Default = false,
-    Tooltip = 'Draw boxes around enemies',
-})
-
 local ESPBoxes = {}
 local UpdateInterval = 0.1 -- Time in seconds between updates
 local lastUpdateTime = tick()
