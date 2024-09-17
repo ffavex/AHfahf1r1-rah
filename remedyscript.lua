@@ -9,95 +9,109 @@ else
     print("External script executed successfully.")
 end
 
-game:GetService("StarterGui"):SetCore("SendNotification",{
-	Title = "Remedy Softworks", -- Required
-	Text = "Thanks for Using Remedy Softworks", -- Required
-	Icon = "rbxassetid://113548811936137" -- Optional
-})
-
--- Import LinoriaLib
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+
+-- Load LinoriaLib components
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
--- Create the main window
+-- Create Window
 local Window = Library:CreateWindow({
-    Title = 'Remedy | Private User',
+    Title = 'Remedy.ez | Private User',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
     MenuFadeTime = 0.2
 })
 
--- Create tabs
+-- Create Tabs
 local Tabs = {
     Aim = Window:AddTab('Aim'),
     Visuals = Window:AddTab('Visuals'),
     Misc = Window:AddTab('Misc'),
-    ['UI Settings'] = Window:AddTab('UI Settings')
+    ['UI Settings'] = Window:AddTab('UI Settings'),
 }
 
--- Create Aimbot Settings
+-- Aimbot Settings
 local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
--- Define Toggles and Options
+-- Aimbot Toggles
+LeftGroupBoxAim:AddToggle('AimbotToggle', {
+    Text = 'Enable Aimbot',
+    Default = false,
+    Tooltip = 'Enable or disable aimbot',
+})
+
+LeftGroupBoxAim:AddToggle('ShowFOV', {
+    Text = 'Show FOV Circle',
+    Default = false,
+    Tooltip = 'Shows the FOV circle for aimbot',
+})
+
+LeftGroupBoxAim:AddSlider('FOVSize', {
+    Text = 'FOV Size',
+    Default = 100,
+    Min = 50,
+    Max = 500,
+    Suffix = 'px',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the size of the FOV for the aimbot',
+})
+
+LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
+    Text = 'Aimbot Smoothness',
+    Default = 5,
+    Min = 1,
+    Max = 20,
+    Suffix = '',
+    Rounding = 1,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Controls how smooth the aimbot snaps to targets',
+})
+
+-- Misc Settings
+local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox('Misc Settings')
+
+LeftGroupBoxMisc:AddSlider('CameraFOV', {
+    Text = 'Camera FOV',
+    Default = 70,
+    Min = 10,
+    Max = 120,
+    Suffix = '°',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the camera field of view',
+    Callback = function(value)
+        local Camera = workspace.CurrentCamera
+        Camera.FieldOfView = value
+    end,
+})
+
+-- Visuals Settings
+local LeftGroupBoxVisuals = Tabs.Visuals:AddLeftGroupbox('Visuals Settings')
+
+LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
+    Text = 'Toggle Enemy Boxes (ESP)',
+    Default = false,
+    Tooltip = 'Draw boxes around enemies',
+})
+
+-- Variables for Settings
 local Toggles = {
-    AimbotToggle = LeftGroupBoxAim:AddToggle('AimbotToggle', {
-        Text = 'Enable Aimbot',
-        Default = false,
-        Tooltip = 'Enable or disable aimbot',
-    }),
-    ShowFOV = LeftGroupBoxAim:AddToggle('ShowFOV', {
-        Text = 'Show FOV Circle',
-        Default = false,
-        Tooltip = 'Shows the FOV circle for aimbot',
-    }),
-    ToggleBoxes = Tabs.Visuals:AddLeftGroupbox('Visuals Settings'):AddToggle('ToggleBoxes', {
-        Text = 'Toggle Enemy Boxes (ESP)',
-        Default = false,
-        Tooltip = 'Draw boxes around enemies',
-    })
+    AimbotToggle = LeftGroupBoxAim:GetToggle('AimbotToggle'),
+    ShowFOV = LeftGroupBoxAim:GetToggle('ShowFOV'),
+    ToggleBoxes = LeftGroupBoxVisuals:GetToggle('ToggleBoxes'),
 }
 
 local Options = {
-    FOVSize = LeftGroupBoxAim:AddSlider('FOVSize', {
-        Text = 'FOV Size',
-        Default = 100,
-        Min = 50,
-        Max = 500,
-        Suffix = 'px',
-        Rounding = 0,
-        Compact = false,
-        HideMax = false,
-        Tooltip = 'Adjust the size of the FOV for the aimbot',
-    }),
-    AimbotSmoothness = LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
-        Text = 'Aimbot Smoothness',
-        Default = 5,
-        Min = 1,
-        Max = 20,
-        Suffix = '',
-        Rounding = 1,
-        Compact = false,
-        HideMax = false,
-        Tooltip = 'Controls how smooth the aimbot snaps to targets',
-    }),
-    CameraFOV = Tabs.Misc:AddLeftGroupbox('Misc Settings'):AddSlider('CameraFOV', {
-        Text = 'Camera FOV',
-        Default = 70,
-        Min = 10,
-        Max = 120,
-        Suffix = '°',
-        Rounding = 0,
-        Compact = false,
-        HideMax = false,
-        Tooltip = 'Adjust the camera field of view',
-        Callback = function(value)
-            local Camera = workspace.CurrentCamera
-            Camera.FieldOfView = value
-        end
-    })
+    FOVSize = LeftGroupBoxAim:GetSlider('FOVSize'),
+    AimbotSmoothness = LeftGroupBoxAim:GetSlider('AimbotSmoothness'),
+    CameraFOV = LeftGroupBoxMisc:GetSlider('CameraFOV'),
 }
 
 -- FOV Circle Drawing
@@ -146,7 +160,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Aimbot Logic (with FOV, Smoothness, Visibility, and Right Click)
+-- Aimbot Logic
 local function Aimbot()
     if not Toggles.AimbotToggle.Value or not rightClickHeld then return end
 
@@ -253,3 +267,10 @@ local function DrawBoxes()
 end
 
 game:GetService('RunService').RenderStepped:Connect(DrawBoxes)
+
+-- Notification
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Remedy Softworks",
+    Text = "Thanks for Using Remedy Softworks",
+    Icon = "rbxassetid://113548811936137"
+})
