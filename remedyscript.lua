@@ -120,18 +120,17 @@ end)
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         rightClickHeld = false
+        Target = nil
     end
 end)
 
--- New Aimbot Logic
+-- New Aimbot Logic (with FOV, Smoothness, Visibility, and Right Click)
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local Target = nil
-local RightClickHeld = false
 
 -- Function to check if a player is on the opposite team
 local function IsOppositeTeam(Player)
