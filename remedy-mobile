@@ -37,6 +37,12 @@ end
 -- Connect the button click to the toggle function
 aimbotToggleButton.MouseButton1Click:Connect(toggleAimbot)
 
+-- Add a toggle for Aimbot in the Aim tab
+tab1.newToggle("Aimbot Toggle", "Enable or Disable Aimbot", false, function(toggleState)
+    aimbotEnabled = toggleState
+    aimbotToggleButton.Text = aimbotEnabled and "Aimbot Enabled" or "Toggle Aimbot"
+end)
+
 -- Check if the target is visible using raycasting
 local function IsVisible(targetPart)
     local origin = game.Workspace.CurrentCamera.CFrame.Position
@@ -87,6 +93,9 @@ game:GetService('RunService').RenderStepped:Connect(Aimbot)
 
 -- ESP Logic
 local ESPBoxes = {}
+local UpdateInterval = 0.1 -- Time in seconds between updates
+local lastUpdateTime = tick()
+
 local function CreateBox(player)
     if not player.Character then return end
 
@@ -117,37 +126,38 @@ local function CreateBox(player)
         end
     end
 
+    game:GetService("RunService").RenderStepped:Connect(UpdateBox)
+
     -- Update ESP after respawn
     player.CharacterAdded:Connect(function(character)
         ESPBoxes[player] = Box
     end)
 
-    -- Update the ESP box regularly
-    local connection
-    connection = game:GetService("RunService").RenderStepped:Connect(function()
-        if not espEnabled then
-            Box.Visible = false
-            connection:Disconnect()
+    player.CharacterRemoving:Connect(function()
+        if ESPBoxes[player] then
+            ESPBoxes[player]:Remove()
             ESPBoxes[player] = nil
-        else
-            UpdateBox()
         end
     end)
 end
 
-local function UpdateESP()
-    if espEnabled then
-        for _, player in pairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
-                if not ESPBoxes[player] then
-                    CreateBox(player)
+local function DrawBoxes()
+    local currentTime = tick()
+    if currentTime - lastUpdateTime >= UpdateInterval then
+        lastUpdateTime = currentTime
+        if espEnabled then
+            for _, player in pairs(game:GetService('Players'):GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
+                    if not ESPBoxes[player] then
+                        CreateBox(player)
+                    end
                 end
             end
-        end
-    else
-        for _, box in pairs(ESPBoxes) do
-            if box then
-                box.Visible = false
+        else
+            for _, box in pairs(ESPBoxes) do
+                if box then
+                    box.Visible = false
+                end
             end
         end
     end
@@ -156,11 +166,11 @@ end
 -- Toggle for ESP
 tab2.newToggle("ESP Toggle", "Enable or Disable ESP Boxes", false, function(toggleState)
     espEnabled = toggleState
-    UpdateESP()
+    DrawBoxes()
 end)
 
 -- Ensure the UI shows up correctly
 tab1.newLabel("Aimbot and ESP Settings")
 
 -- Make sure ESP updates even if toggles are changed
-game:GetService("RunService").RenderStepped:Connect(UpdateESP)
+game:GetService("RunService").RenderStepped:Connect(DrawBoxes)
