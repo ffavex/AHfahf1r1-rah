@@ -1,0 +1,226 @@
+-- Load the DrRay library from the GitHub repository Library
+local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
+
+-- Create a new window and set its title and theme
+local window = DrRayLibrary:Load("Remedy | Mobile", "Default")
+
+-- Create the Aim tab
+local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
+
+-- Add Aimbot settings to the Aim tab
+local aimbotEnabled = false
+local fovSize = 100
+local aimbotSmoothness = 5
+
+tab1.newToggle("Enable Aimbot", "Enable or disable aimbot", false, function(state)
+    aimbotEnabled = state
+end)
+
+tab1.newToggle("Show FOV Circle", "Shows the FOV circle for aimbot", false, function(state)
+    FOVCircle.Visible = state
+end)
+
+tab1.newSlider("FOV Size", "Adjust the size of the FOV for the aimbot", 100, 50, 500, 1, "px", function(value)
+    fovSize = value
+    if FOVCircle.Visible then
+        FOVCircle.Radius = fovSize
+    end
+end)
+
+tab1.newSlider("Aimbot Smoothness", "Controls how smooth the aimbot snaps to targets", 5, 1, 20, 1, "", function(value)
+    aimbotSmoothness = value
+end)
+
+-- Create the Visuals tab
+local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
+
+-- Add ESP functionality to the Visuals tab
+local espEnabled = false
+local ESPBoxes = {}
+local UpdateInterval = 0.1 -- Time in seconds between updates
+
+local function CreateBox(player)
+    if not player.Character then return end
+
+    local Box = Drawing.new("Square")
+    Box.Thickness = 2
+    Box.Transparency = 1
+    Box.Color = Color3.fromRGB(66, 135, 245)
+    Box.Filled = false
+    Box.Visible = false
+
+    ESPBoxes[player] = Box
+
+    local function UpdateBox()
+        if espEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local rootPart = player.Character.HumanoidRootPart
+            local rootPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
+            if onScreen then
+                local sizeY = (game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, 3, 0)).p) - game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, -3, 0)).p)).Magnitude
+                local sizeX = sizeY * 0.6
+                Box.Size = Vector2.new(sizeX, sizeY)
+                Box.Position = Vector2.new(rootPos.X - Box.Size.X / 2, rootPos.Y - Box.Size.Y / 2)
+                Box.Visible = player.Team ~= game.Players.LocalPlayer.Team
+            else
+                Box.Visible = false
+            end
+        else
+            Box.Visible = false
+        end
+    end
+
+    -- Update ESP after respawn
+    player.CharacterAdded:Connect(function(character)
+        ESPBoxes[player] = Box
+    end)
+
+    -- Update the ESP box regularly
+    local connection
+    connection = game:GetService("RunService").RenderStepped:Connect(function()
+        if not espEnabled then
+            Box.Visible = false
+            connection:Disconnect()
+            ESPBoxes[player] = nil
+        else
+            UpdateBox()
+        end
+    end)
+end
+
+local function UpdateESP()
+    if espEnabled then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if not ESPBoxes[player] then
+                CreateBox(player)
+            end
+        end
+    else
+        for _, box in pairs(ESPBoxes) do
+            if box then
+                box.Visible = false
+            end
+        end
+    end
+end
+
+-- Toggle to enable or disable ESP
+tab2.newToggle("ESP Toggle", "Enable or Disable ESP Boxes", false, function(toggleState)
+    espEnabled = toggleState
+    UpdateESP()
+end)
+
+tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
+    print(selectedOption)
+end)
+
+-- Create a mobile-friendly aimbot toggle button
+local screenGui = Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
+local aimbotToggleButton = Instance.new("TextButton")
+
+aimbotToggleButton.Size = UDim2.new(0, 200, 0, 50)
+aimbotToggleButton.Position = UDim2.new(0.5, -100, 1, -60) -- Centered at the bottom of the screen
+aimbotToggleButton.Text = "Toggle Aimbot"
+aimbotToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+aimbotToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+aimbotToggleButton.BackgroundTransparency = 0.5
+aimbotToggleButton.Font = Enum.Font.SourceSans
+aimbotToggleButton.TextSize = 24
+aimbotToggleButton.Parent = screenGui
+
+-- Function to toggle the aimbot
+local function toggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    if aimbotEnabled then
+        aimbotToggleButton.Text = "Aimbot Enabled"
+        print("Aimbot Enabled")
+    else
+        aimbotToggleButton.Text = "Toggle Aimbot"
+        print("Aimbot Disabled")
+    end
+end
+
+-- Connect the button click to the toggle function
+aimbotToggleButton.MouseButton1Click:Connect(toggleAimbot)
+
+-- FOV Circle Drawing
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 2
+FOVCircle.Transparency = 1
+FOVCircle.Color = Color3.fromRGB(0, 255, 0)
+FOVCircle.Filled = false
+FOVCircle.Visible = false
+FOVCircle.Radius = fovSize
+
+local function UpdateFOV()
+    local mouse = game.Players.LocalPlayer:GetMouse()
+    if FOVCircle.Visible then
+        FOVCircle.Position = Vector2.new(mouse.X, mouse.Y) -- Centered on the mouse position
+        FOVCircle.Radius = fovSize
+    end
+end
+
+game:GetService('RunService').RenderStepped:Connect(UpdateFOV)
+
+-- Check if the target is visible using raycasting
+local function IsVisible(targetPart)
+    local origin = game.Workspace.CurrentCamera.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character} -- Ignore local player
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local ray = game.Workspace:Raycast(origin, direction, raycastParams)
+    return ray == nil -- If no obstruction, target is visible
+end
+
+-- Detect Right-Click Hold
+local UserInputService = game:GetService('UserInputService')
+local rightClickHeld = false
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = false
+    end
+end)
+
+-- Aimbot Logic (with FOV, Smoothness, Visibility, and Right Click)
+local function Aimbot()
+    if not aimbotEnabled or not rightClickHeld then return end
+
+    local camera = game.Workspace.CurrentCamera
+    local localPlayer = game.Players.LocalPlayer
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= localPlayer and player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 then
+            local targetPart = player.Character:FindFirstChild("HumanoidRootPart")
+            if targetPart and IsVisible(targetPart) then
+                local playerPos = targetPart.Position
+                local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
+
+                if onScreen then
+                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
+                    if distance < fovSize and distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+
+    if closestPlayer then
+        local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
+        local currentPosition = camera.CFrame.Position
+        local targetCFrame = CFrame.new(currentPosition, targetPosition)
+        camera.CFrame = CFrame.new(currentPosition:Lerp(targetCFrame.Position, aimbotSmoothness / 100), targetPosition)
+    end
+end
+
+game:GetService('RunService').RenderStepped:Connect(Aimbot)
