@@ -9,7 +9,6 @@ if not success then
 else
     print("External script executed successfully.")
 end
-
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
@@ -247,9 +246,6 @@ local function DrawBoxes()
             end
         end
     end
-end
-
-game:GetService('RunService').RenderStepped:Connect(DrawBoxes)
 end
 
 game:GetService('RunService').RenderStepped:Connect(DrawBoxes)
