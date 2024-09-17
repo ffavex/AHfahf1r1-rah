@@ -10,191 +10,84 @@ else
     print("External script executed successfully.")
 end
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/WetCheezit/Bracket-V2/main/src.lua"))()
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 
--- Notification on first run
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Remedy Softworks",
-    Text = "Thanks for using Remedy",
-    Duration = 5
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Window = Library:CreateWindow({
+    Title = 'Remedy.ez | Private User',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
 })
 
--- Window
-local Window = Library:CreateWindow("Remedy Softworks")
-
--- Tabs
-local Tab1 = Window:CreateTab("Aimbot")
-local Tab2 = Window:CreateTab("Visuals")
-local Tab3 = Window:CreateTab("Misc")
-
--- Groupbox for Aimbot Settings
-local AimbotGroupbox = Tab1:CreateGroupbox("Aimbot Settings", "Left")
-
--- Toggle for Aimbot
-local AimbotToggle = AimbotGroupbox:CreateToggle("Enable Aimbot", false, function(state)
-    Toggles.AimbotToggle.Value = state
-end)
-
--- Toggle for Show FOV Circle
-local ShowFOVToggle = AimbotGroupbox:CreateToggle("Show FOV Circle", false, function(state)
-    Toggles.ShowFOV.Value = state
-end)
-
--- Slider for FOV Size
-local FOVSizeSlider = AimbotGroupbox:CreateSlider("FOV Size", 50, 500, 100, function(value)
-    Options.FOVSize.Value = value
-end)
-
--- Slider for Aimbot Smoothness
-local AimbotSmoothnessSlider = AimbotGroupbox:CreateSlider("Aimbot Smoothness", 1, 20, 5, function(value)
-    Options.AimbotSmoothness.Value = value
-end)
-
--- Dropdown for Target Part Selection
-local TargetPartDropdown = AimbotGroupbox:CreateDropdown("Target Part", {"Head", "Humanoid", "Chest"}, function(selectedPart)
-    Options.TargetPart.Value = selectedPart
-end)
-
--- Groupbox for Visuals Settings
-local VisualsGroupbox = Tab2:CreateGroupbox("Visuals Settings", "Left")
-
--- Toggle for ESP Boxes
-local ToggleBoxes = VisualsGroupbox:CreateToggle("Toggle Enemy Boxes (ESP)", false, function(state)
-    Toggles.ToggleBoxes.Value = state
-end)
-
--- Groupbox for Misc Settings
-local MiscGroupbox = Tab3:CreateGroupbox("Misc Settings", "Left")
-
--- Toggle for Watermark
-local WatermarkToggle = MiscGroupbox:CreateToggle("Toggle Watermark", false, function(state)
-    WatermarkFrame.Visible = state
-end)
-
--- Initialization of Options and Toggles
-local Options = {
-    FOVSize = { Value = 100 },
-    AimbotSmoothness = { Value = 5 },
-    TargetPart = { Value = "Head" }
+local Tabs = {
+    Aim = Window:AddTab('Aim'),
+    Visuals = Window:AddTab('Visuals'),
+    Misc = Window:AddTab('Misc'),
+    ['UI Settings'] = Window:AddTab('UI Settings'),
 }
 
-local Toggles = {
-    AimbotToggle = { Value = false },
-    ShowFOV = { Value = false },
-    ToggleBoxes = { Value = false }
-}
+local LeftGroupBoxAim = Tabs.Aim:AddLeftGroupbox('Aimbot Settings')
 
--- Create the Watermark GUI
-local WatermarkFrame = Instance.new("Frame")
-WatermarkFrame.Name = "Watermark"
-WatermarkFrame.Parent = game.StarterGui
-WatermarkFrame.BackgroundColor3 = Color3.fromRGB(52, 52, 52)
-WatermarkFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-WatermarkFrame.BorderSizePixel = 0
-WatermarkFrame.Position = UDim2.new(0.401605606, 0, 0.025125647, 0)
-WatermarkFrame.Size = UDim2.new(0, 319, 0, 25)
-WatermarkFrame.Visible = false -- Initially hidden
+-- Aimbot Toggles
+LeftGroupBoxAim:AddToggle('AimbotToggle', {
+    Text = 'Enable Aimbot',
+    Default = false,
+    Tooltip = 'Enable or disable aimbot',
+})
 
-local Ping = Instance.new("TextLabel")
-Ping.Name = "Ping"
-Ping.Parent = WatermarkFrame
-Ping.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Ping.BackgroundTransparency = 1.000
-Ping.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Ping.BorderSizePixel = 0
-Ping.Position = UDim2.new(0.626959264, 0, 0.176470101, 0)
-Ping.Size = UDim2.new(0, 52, 0, 19)
-Ping.Font = Enum.Font.SourceSansBold
-Ping.TextColor3 = Color3.fromRGB(168, 168, 168)
-Ping.TextSize = 14.000
+LeftGroupBoxAim:AddToggle('ShowFOV', {
+    Text = 'Show FOV Circle',
+    Default = false,
+    Tooltip = 'Shows the FOV circle for aimbot',
+})
 
-local FPS = Instance.new("TextLabel")
-FPS.Name = "FPS"
-FPS.Parent = WatermarkFrame
-FPS.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-FPS.BackgroundTransparency = 1.000
-FPS.BorderColor3 = Color3.fromRGB(0, 0, 0)
-FPS.BorderSizePixel = 0
-FPS.Position = UDim2.new(0.789968669, 0, 0.176470101, 0)
-FPS.Size = UDim2.new(0, 52, 0, 19)
-FPS.Font = Enum.Font.SourceSansBold
-FPS.TextColor3 = Color3.fromRGB(168, 168, 168)
-FPS.TextSize = 14.000
+LeftGroupBoxAim:AddSlider('FOVSize', {
+    Text = 'FOV Size',
+    Default = 100,
+    Min = 50,
+    Max = 500,
+    Suffix = 'px',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the size of the FOV for the aimbot',
+})
 
-local Remedy = Instance.new("TextLabel")
-Remedy.Name = "Remedy"
-Remedy.Parent = WatermarkFrame
-Remedy.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
-Remedy.BackgroundTransparency = 1.000
-Remedy.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Remedy.BorderSizePixel = 0
-Remedy.Position = UDim2.new(0.112852663, 0, 0.0400004573, 0)
-Remedy.Size = UDim2.new(0, 94, 0, 24)
-Remedy.Font = Enum.Font.Unknown
-Remedy.Text = "REMEDY"
-Remedy.TextColor3 = Color3.fromRGB(255, 255, 255)
-Remedy.TextSize = 14.000
+LeftGroupBoxAim:AddSlider('AimbotSmoothness', {
+    Text = 'Aimbot Smoothness',
+    Default = 5,
+    Min = 1,
+    Max = 20,
+    Suffix = '',
+    Rounding = 1,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Controls how smooth the aimbot snaps to targets',
+})
 
-local UICorner = Instance.new("UICorner")
-UICorner.Parent = WatermarkFrame
+-- Misc Tab and FOV Slider
+local LeftGroupBoxMisc = Tabs.Misc:AddLeftGroupbox('Misc Settings')
 
--- Function to update ping and FPS in the watermark
-local function updateWatermark()
-    -- Update Ping
-    local player = game.Players.LocalPlayer
-    Ping.Text = "Ping: " .. player.Status.Ping
-
-    -- Update FPS
-    local lastFrameTime = tick()
-    local frameCount = 0
-
-    game:GetService("RunService").RenderStepped:Connect(function()
-        frameCount = frameCount + 1
-        local currentTime = tick()
-        if currentTime - lastFrameTime >= 1 then
-            FPS.Text = "FPS: " .. frameCount
-            frameCount = 0
-            lastFrameTime = currentTime
-        end
-    end)
-end
-
-updateWatermark()
-
--- Make the watermark frame draggable
-local function makeDraggable(frame)
-    local dragging, dragInput, startPos, startPosAbs = false, nil, nil, nil
-
-    local function update(input)
-        local delta = input.Position - dragInput
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragInput = input.Position
-            startPos = frame.Position
-            startPosAbs = input.Position
-        end
-    end)
-
-    frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            if dragging then
-                update(input)
-            end
-        end
-    end)
-end
-
-makeDraggable(WatermarkFrame)
+LeftGroupBoxMisc:AddSlider('CameraFOV', {
+    Text = 'Camera FOV',
+    Default = 70,
+    Min = 10,
+    Max = 120,
+    Suffix = '°',
+    Rounding = 0,
+    Compact = false,
+    HideMax = false,
+    Tooltip = 'Adjust the camera field of view',
+    Callback = function(value)
+        local Camera = workspace.CurrentCamera
+        Camera.FieldOfView = value
+    end,
+})
 
 -- FOV Circle Drawing
 local FOVCircle = Drawing.new("Circle")
@@ -215,13 +108,34 @@ end
 game:GetService('RunService').RenderStepped:Connect(UpdateFOV)
 
 -- Check if the target is visible using raycasting
-local function IsVisible(target)
-    local camera = game.Workspace.CurrentCamera
-    local _, onScreen = camera:WorldToViewportPoint(target.Position)
-    return onScreen
+local function IsVisible(targetPart)
+    local origin = game.Workspace.CurrentCamera.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character} -- Ignore local player
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local ray = game.Workspace:Raycast(origin, direction, raycastParams)
+
+    return ray == nil -- If no obstruction, target is visible
 end
 
--- Aimbot function
+-- Detect Right-Click Hold
+local UserInputService = game:GetService('UserInputService')
+local rightClickHeld = false
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = false
+    end
+end)
+
+-- Aimbot Logic (with FOV, Smoothness, Visibility, and Right Click)
 local function Aimbot()
     if not Toggles.AimbotToggle.Value or not rightClickHeld then return end
 
@@ -232,7 +146,7 @@ local function Aimbot()
 
     for _, player in pairs(game.Players:GetPlayers()) do
         if player ~= localPlayer and player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 then
-            local targetPart = player.Character:FindFirstChild(Options.TargetPart.Value)
+            local targetPart = player.Character:FindFirstChild("HumanoidRootPart")
             if targetPart and IsVisible(targetPart) then
                 local playerPos = targetPart.Position
                 local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
@@ -259,6 +173,14 @@ end
 game:GetService('RunService').RenderStepped:Connect(Aimbot)
 
 -- ESP Section
+local LeftGroupBoxVisuals = Tabs.Visuals:AddLeftGroupbox('Visuals Settings')
+
+LeftGroupBoxVisuals:AddToggle('ToggleBoxes', {
+    Text = 'Toggle Enemy Boxes (ESP)',
+    Default = false,
+    Tooltip = 'Draw boxes around enemies',
+})
+
 local ESPBoxes = {}
 local UpdateInterval = 0.1 -- Time in seconds between updates
 local lastUpdateTime = tick()
@@ -325,6 +247,9 @@ local function DrawBoxes()
             end
         end
     end
+end
+
+game:GetService('RunService').RenderStepped:Connect(DrawBoxes)
 end
 
 game:GetService('RunService').RenderStepped:Connect(DrawBoxes)
