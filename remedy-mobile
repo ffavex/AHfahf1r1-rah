@@ -13,15 +13,17 @@ local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 -- Create Aim tab
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
--- Variable for aimbot toggle
+-- Variables for aimbot
 local aimbotEnabled = false
 local aimbotFOVRadius = 150
 local aimbotFOVCircle = Drawing.new("Circle")
 
 aimbotFOVCircle.Visible = true
 aimbotFOVCircle.Thickness = 2
-aimbotFOVCircle.Color = Color3.fromRGB(255, 255, 0) -- Yellow color
-aimbotFOVCircle.NumSides = 30 -- Smoothing of the circle
+aimbotFOVCircle.Color = Color3.fromRGB(0, 255, 255) -- Match ESP color (cyan)
+aimbotFOVCircle.Transparency = 1
+aimbotFOVCircle.Filled = false
+aimbotFOVCircle.NumSides = 30 -- Smooth the circle
 
 -- Toggle Aimbot
 tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
@@ -36,6 +38,7 @@ end)
 -- FOV Slider
 tab1.newSlider("Aimbot FOV", 50, 300, 150, function(value)
     aimbotFOVRadius = value
+    aimbotFOVCircle.Radius = aimbotFOVRadius
     print("FOV Radius:", aimbotFOVRadius)
 end)
 
@@ -136,22 +139,15 @@ tab2.newToggle("ESP", "ESP!", false, function(toggleState)
 end)
 
 -- Aimbot Utility Functions
-local function isPlayerVisible(player)
-    local character = player.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local hrp = character.HumanoidRootPart
-        local rayOrigin = workspace.CurrentCamera.CFrame.Position
-        local rayDirection = (hrp.Position - rayOrigin).Unit * 1000
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+local function isPartVisible(part)
+    local rayOrigin = workspace.CurrentCamera.CFrame.Position
+    local rayDirection = (part.Position - rayOrigin).Unit * 1000
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
 
-        local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-        if raycastResult and raycastResult.Instance:IsDescendantOf(character) then
-            return true
-        end
-    end
-    return false
+    local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+    return raycastResult and raycastResult.Instance:IsDescendantOf(part.Parent)
 end
 
 local function isPlayerAlive(player)
@@ -175,14 +171,18 @@ local function getClosestVisiblePlayer()
     local shortestDistance = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and isPlayerAlive(player) and not isSameTeam(player) and isPlayerVisible(player) and isInFOV(player) then
-            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)).Magnitude
-                if distance < shortestDistance then
-                    closestPlayer = player
-                    shortestDistance = distance
+        if player ~= LocalPlayer and isPlayerAlive(player) and not isSameTeam(player) then
+            local character = player.Character
+            if character then
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") and isPartVisible(part) and isInFOV(player) then
+                        local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(part.Position)
+                        local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)).Magnitude
+                        if distance < shortestDistance then
+                            closestPlayer = player
+                            shortestDistance = distance
+                        end
+                    end
                 end
             end
         end
