@@ -2,175 +2,92 @@
 local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
 
 -- Create a new window and set its title and theme
-local window = DrRayLibrary:Load("Remedy | Mobile", "Default")
+local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 
--- Create the Aim tab
+-- Create the first tab with an image ID
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
--- Create the Visuals tab
+tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
+    if toggleState then
+        print("On")
+    else
+        print("Off")
+    end
+end)
+
+-- Create the second tab with a different image ID
 local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
 
--- Initialize aimbot and ESP settings
-local aimbotEnabled = false
-local espEnabled = false
+-- ESP Code Variables
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local espBoxes = {}
 
--- Create a mobile-friendly aimbot toggle button
-local screenGui = Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
-local aimbotToggleButton = Instance.new("TextButton")
-
-aimbotToggleButton.Size = UDim2.new(0, 200, 0, 50)
-aimbotToggleButton.Position = UDim2.new(0.5, -100, 1, -60) -- Centered at the bottom of the screen
-aimbotToggleButton.Text = "Toggle Aimbot"
-aimbotToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-aimbotToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-aimbotToggleButton.BackgroundTransparency = 0.5
-aimbotToggleButton.Font = Enum.Font.SourceSans
-aimbotToggleButton.TextSize = 24
-aimbotToggleButton.Parent = screenGui
-
--- Function to toggle the aimbot
-local function toggleAimbot()
-    aimbotEnabled = not aimbotEnabled
-    aimbotToggleButton.Text = aimbotEnabled and "Aimbot Enabled" or "Toggle Aimbot"
+-- Function to create the ESP box
+local function createESPBox(player)
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
+    box.Thickness = 2
+    box.Filled = false
+    espBoxes[player] = box
 end
 
--- Connect the button click to the toggle function
-aimbotToggleButton.MouseButton1Click:Connect(toggleAimbot)
+-- Function to update the ESP box
+local function updateESPBox(player, character)
+    local box = espBoxes[player]
+    if box and character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
 
--- Add a toggle for Aimbot in the Aim tab
-tab1.newToggle("Aimbot Toggle", "Enable or Disable Aimbot", false, function(toggleState)
-    aimbotEnabled = toggleState
-    aimbotToggleButton.Text = aimbotEnabled and "Aimbot Enabled" or "Toggle Aimbot"
+        if onScreen then
+            box.Visible = true
+            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z) -- Dynamic scaling based on distance
+            box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
+        else
+            box.Visible = false
+        end
+    else
+        box.Visible = false
+    end
+end
+
+-- Function to toggle ESP for all players
+local function toggleESP(toggleState)
+    if toggleState then
+        print("ESP On")
+
+        -- Create ESP boxes for all players
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createESPBox(player)
+            end
+        end
+
+        -- Update ESP boxes on every frame
+        game:GetService("RunService").RenderStepped:Connect(function()
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    updateESPBox(player, player.Character)
+                end
+            end
+        end)
+    else
+        print("ESP Off")
+
+        -- Hide all ESP boxes
+        for _, box in pairs(espBoxes) do
+            box.Visible = false
+        end
+    end
+end
+
+-- ESP Box Toggle
+tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
+    toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
 end)
 
--- Check if the target is visible using raycasting
-local function IsVisible(targetPart)
-    local origin = game.Workspace.CurrentCamera.CFrame.Position
-    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character} -- Ignore local player
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    local ray = game.Workspace:Raycast(origin, direction, raycastParams)
-    return ray == nil -- If no obstruction, target is visible
-end
-
--- Aimbot Logic (with Visibility)
-local function Aimbot()
-    if not aimbotEnabled then return end
-
-    local camera = game.Workspace.CurrentCamera
-    local localPlayer = game.Players.LocalPlayer
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild('Humanoid') and player.Character.Humanoid.Health > 0 then
-            local targetPart = player.Character:FindFirstChild("HumanoidRootPart")
-            if targetPart and IsVisible(targetPart) then
-                local playerPos = targetPart.Position
-                local screenPoint, onScreen = camera:WorldToViewportPoint(playerPos)
-
-                if onScreen then
-                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                    if distance < shortestDistance then
-                        shortestDistance = distance
-                        closestPlayer = player
-                    end
-                end
-            end
-        end
-    end
-
-    if closestPlayer then
-        local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
-        local currentPosition = camera.CFrame.Position
-        local targetCFrame = CFrame.new(currentPosition, targetPosition)
-        camera.CFrame = CFrame.new(currentPosition:Lerp(targetCFrame.Position, 0.1), targetPosition) -- Adjust smoothness if needed
-    end
-end
-
-game:GetService('RunService').RenderStepped:Connect(Aimbot)
-
--- ESP Logic
-local ESPBoxes = {}
-local UpdateInterval = 0.1 -- Time in seconds between updates
-local lastUpdateTime = tick()
-
-local function CreateBox(player)
-    if not player.Character then return end
-
-    local Box = Drawing.new("Square")
-    Box.Thickness = 2
-    Box.Transparency = 1
-    Box.Color = Color3.fromRGB(66, 135, 245)
-    Box.Filled = false
-    Box.Visible = false
-
-    ESPBoxes[player] = Box
-
-    local function UpdateBox()
-        if espEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local rootPart = player.Character.HumanoidRootPart
-            local rootPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-            if onScreen then
-                local sizeY = (game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, 3, 0)).p) - game.Workspace.CurrentCamera:WorldToViewportPoint((rootPart.CFrame * CFrame.new(0, -3, 0)).p)).Magnitude
-                local sizeX = sizeY * 0.6
-                Box.Size = Vector2.new(sizeX, sizeY)
-                Box.Position = Vector2.new(rootPos.X - Box.Size.X / 2, rootPos.Y - Box.Size.Y / 2)
-                Box.Visible = player.Team ~= game.Players.LocalPlayer.Team
-            else
-                Box.Visible = false
-            end
-        else
-            Box.Visible = false
-        end
-    end
-
-    game:GetService("RunService").RenderStepped:Connect(UpdateBox)
-
-    -- Update ESP after respawn
-    player.CharacterAdded:Connect(function(character)
-        ESPBoxes[player] = Box
-    end)
-
-    player.CharacterRemoving:Connect(function()
-        if ESPBoxes[player] then
-            ESPBoxes[player]:Remove()
-            ESPBoxes[player] = nil
-        end
-    end)
-end
-
-local function DrawBoxes()
-    local currentTime = tick()
-    if currentTime - lastUpdateTime >= UpdateInterval then
-        lastUpdateTime = currentTime
-        if espEnabled then
-            for _, player in pairs(game:GetService('Players'):GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
-                    if not ESPBoxes[player] then
-                        CreateBox(player)
-                    end
-                end
-            end
-        else
-            for _, box in pairs(ESPBoxes) do
-                if box then
-                    box.Visible = false
-                end
-            end
-        end
-    end
-end
-
--- Toggle for ESP
-tab2.newToggle("ESP Toggle", "Enable or Disable ESP Boxes", false, function(toggleState)
-    espEnabled = toggleState
-    DrawBoxes()
+-- Dropdown
+tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
+    print(selectedOption)
 end)
-
--- Ensure the UI shows up correctly
-tab1.newLabel("Aimbot and ESP Settings")
-
--- Make sure ESP updates even if toggles are changed
-game:GetService("RunService").RenderStepped:Connect(DrawBoxes)
