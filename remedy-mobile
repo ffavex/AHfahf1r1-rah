@@ -1,3 +1,23 @@
+-- Load the DrRay library from the GitHub repository Library
+local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
+
+-- Create a new window and set its title and theme
+local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
+
+-- Create the first tab with an image ID
+local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
+
+tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
+    if toggleState then
+        print("On")
+    else
+        print("Off")
+    end
+end)
+
+-- Create the second tab with a different image ID
+local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
+
 -- ESP Code Variables
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -100,4 +120,9 @@ end
 -- Hook ESP toggle to your menu
 tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
     toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
+end)
+
+-- Dropdown as in the original code
+tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
+    print(selectedOption)
 end)
