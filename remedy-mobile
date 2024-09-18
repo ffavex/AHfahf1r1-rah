@@ -1,36 +1,28 @@
--- Load the DrRay library from the GitHub repository Library
-local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
-
--- Create a new window and set its title and theme
-local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
-
--- Create the first tab with an image ID
-local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
-
-tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
-    if toggleState then
-        print("On")
-    else
-        print("Off")
-    end
-end)
-
--- Create the second tab with a different image ID
-local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
-
 -- ESP Code Variables
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local espBoxes = {}
+local espConnection = nil
 
 -- Function to create the ESP box
 local function createESPBox(player)
+    if espBoxes[player] then return end -- Prevent duplicate ESP boxes
+
     local box = Drawing.new("Square")
     box.Visible = false
     box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
     box.Thickness = 2
     box.Filled = false
     espBoxes[player] = box
+end
+
+-- Function to remove the ESP box when a player leaves
+local function removeESPBox(player)
+    if espBoxes[player] then
+        espBoxes[player]:Remove() -- Remove the drawing
+        espBoxes[player] = nil
+    end
 end
 
 -- Function to update the ESP box
@@ -65,29 +57,47 @@ local function toggleESP(toggleState)
         end
 
         -- Update ESP boxes on every frame
-        game:GetService("RunService").RenderStepped:Connect(function()
+        espConnection = RunService.RenderStepped:Connect(function()
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
                     updateESPBox(player, player.Character)
                 end
             end
         end)
+
+        -- Detect when a player dies and redraw the ESP
+        Players.PlayerRemoving:Connect(function(player)
+            removeESPBox(player)
+        end)
+
+        -- Detect when a player joins and create their ESP box
+        Players.PlayerAdded:Connect(function(player)
+            if player ~= LocalPlayer then
+                createESPBox(player)
+                player.CharacterAdded:Connect(function(character)
+                    updateESPBox(player, character)
+                end)
+            end
+        end)
     else
         print("ESP Off")
 
-        -- Hide all ESP boxes
+        -- Disconnect the ESP update connection
+        if espConnection then
+            espConnection:Disconnect()
+            espConnection = nil
+        end
+
+        -- Hide and remove all ESP boxes
         for _, box in pairs(espBoxes) do
             box.Visible = false
+            box:Remove() -- Clean up the drawings
         end
+        espBoxes = {} -- Clear the ESP table
     end
 end
 
--- ESP Box Toggle
+-- Hook ESP toggle to your menu
 tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
     toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
-end)
-
--- Dropdown
-tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
-    print(selectedOption)
 end)
