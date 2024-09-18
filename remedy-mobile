@@ -12,11 +12,10 @@ local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/
 local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 
 -- Create the first tab with an image ID
-local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
+local tab1 = window:NewTab("Aim", "ImageIdHere")
 
 -- Aimbot Variables
 local aimbotEnabled = false
-local aimbotButton = nil
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -43,9 +42,9 @@ end
 local function toggleAimbot(toggleState)
     if toggleState then
         aimbotEnabled = true
-        aimbotButton.Text = "Aimbot: Enabled" -- Change button text to show aimbot is enabled
         print("Aimbot Enabled")
 
+        -- Lock onto closest player when aimbot is enabled
         RunService.RenderStepped:Connect(function()
             if aimbotEnabled then
                 local closestPlayer = getClosestPlayer()
@@ -57,27 +56,120 @@ local function toggleAimbot(toggleState)
         end)
     else
         aimbotEnabled = false
-        aimbotButton.Text = "Aimbot: Disabled" -- Change button text to show aimbot is disabled
         print("Aimbot Disabled")
     end
 end
 
--- Create a text button that toggles the aimbot
-aimbotButton = tab1.newButton("Aimbot: Disabled", function()
-    aimbotEnabled = not aimbotEnabled -- Toggle the aimbot state
-    toggleAimbot(aimbotEnabled) -- Enable or disable the aimbot based on the new state
+-- Add the Aimbot toggle to the first tab
+tab1:NewToggle("Aimbot", "Aimbot!", false, function(toggleState)
+    toggleAimbot(toggleState) -- Toggle the aimbot functionality based on the toggle state
 end)
 
--- ESP tab as before
-local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
+-- Create the second tab with a different image ID
+local tab2 = window:NewTab("Visuals", "ImageIdLogoHere")
 
--- ESP Code Variables and functions from before
+-- ESP Code Variables and functions
+local espBoxes = {}
+local espConnection = nil
 
-tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
+-- Function to create the ESP box
+local function createESPBox(player)
+    if espBoxes[player] then return end -- Prevent duplicate ESP boxes
+
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
+    box.Thickness = 2
+    box.Filled = false
+    espBoxes[player] = box
+end
+
+-- Function to remove the ESP box when a player leaves
+local function removeESPBox(player)
+    if espBoxes[player] then
+        espBoxes[player]:Remove() -- Remove the drawing
+        espBoxes[player] = nil
+    end
+end
+
+-- Function to update the ESP box
+local function updateESPBox(player, character)
+    local box = espBoxes[player]
+    if box and character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+
+        if onScreen then
+            box.Visible = true
+            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z) -- Dynamic scaling based on distance
+            box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
+        else
+            box.Visible = false
+        end
+    else
+        box.Visible = false
+    end
+end
+
+-- Function to toggle ESP for all players
+local function toggleESP(toggleState)
+    if toggleState then
+        print("ESP On")
+
+        -- Create ESP boxes for all players
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createESPBox(player)
+            end
+        end
+
+        -- Update ESP boxes on every frame
+        espConnection = RunService.RenderStepped:Connect(function()
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    updateESPBox(player, player.Character)
+                end
+            end
+        end)
+
+        -- Detect when a player leaves and remove their ESP box
+        Players.PlayerRemoving:Connect(function(player)
+            removeESPBox(player)
+        end)
+
+        -- Detect when a player joins and create their ESP box
+        Players.PlayerAdded:Connect(function(player)
+            if player ~= LocalPlayer then
+                createESPBox(player)
+                player.CharacterAdded:Connect(function(character)
+                    updateESPBox(player, character)
+                end)
+            end
+        end)
+    else
+        print("ESP Off")
+
+        -- Disconnect the ESP update connection
+        if espConnection then
+            espConnection:Disconnect()
+            espConnection = nil
+        end
+
+        -- Hide and remove all ESP boxes
+        for _, box in pairs(espBoxes) do
+            box.Visible = false
+            box:Remove() -- Clean up the drawings
+        end
+        espBoxes = {} -- Clear the ESP table
+    end
+end
+
+-- Hook ESP toggle to your menu
+tab2:NewToggle("ESP Box", "ESP Box", true, function(toggleState)
     toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
 end)
 
 -- Dropdown as in the original code
-tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
+tab2:NewDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
     print(selectedOption)
 end)
