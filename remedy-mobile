@@ -14,8 +14,12 @@ local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 -- Create the first tab with an image ID
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
-tab1.newToggle("Aimbot", "Aimbot!", true, function(toggleState)
-    if toggleState then
+-- Variable to keep track of whether aimbot is on or off
+local aimbotEnabled = false
+
+tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
+    aimbotEnabled = toggleState
+    if aimbotEnabled then
         print("Aimbot On")
     else
         print("Aimbot Off")
@@ -113,93 +117,67 @@ local function toggleESP(toggleState)
         end)
     else
         print("ESP Off")
-
-        -- Disconnect the ESP update connection
         if espConnection then
             espConnection:Disconnect()
-            espConnection = nil
         end
-
-        -- Hide and remove all ESP boxes
         for _, box in pairs(espBoxes) do
-            box.Visible = false
-            box:Remove() -- Clean up the drawings
+            box:Remove() -- Clear ESP
         end
-        espBoxes = {} -- Clear the ESP table
+        espBoxes = {} -- Clear the table
     end
 end
 
--- Hook ESP toggle to your menu
-tab2.newToggle("ESP Box", "Esp Box", true, function(toggleState)
-    toggleESP(toggleState) -- Hooked up the toggle to the ESP functionality
+-- Toggle ESP option in the Visuals tab
+tab2.newToggle("ESP", "ESP!", false, function(toggleState)
+    toggleESP(toggleState)
 end)
 
--- Dropdown as in the original code
-tab2.newDropdown("Dropdown", "Select one of these options!", {"water", "dog", "air", "bb", "airplane", "wohhho", "yeay", "delete"}, function(selectedOption)
-    print(selectedOption)
-end)
+-- Aimbot Logic
+local function isPlayerVisible(player)
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        local rayOrigin = workspace.CurrentCamera.CFrame.Position
+        local rayDirection = (hrp.Position - rayOrigin).Unit * 1000
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
 
--- Aimbot with team and visibility checks
-local fov = 100
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Cam = game.Workspace.CurrentCamera
-
-local FOVring = Drawing.new("Circle")
-FOVring.Visible = true
-FOVring.Thickness = 2
-FOVring.Color = Color3.fromRGB(128, 0, 128) -- Purple color
-FOVring.Filled = false
-FOVring.Radius = fov
-FOVring.Position = Cam.ViewportSize / 2
-
-local function updateDrawings()
-    local camViewportSize = Cam.ViewportSize
-    FOVring.Position = camViewportSize / 2
-end
-
-local function onKeyDown(input)
-    if input.KeyCode == Enum.KeyCode.Delete then
-        RunService:UnbindFromRenderStep("FOVUpdate")
-        FOVring:Remove()
+        local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        if raycastResult and raycastResult.Instance:IsDescendantOf(character) then
+            return true
+        end
     end
+    return false
 end
 
-UserInputService.InputBegan:Connect(onKeyDown)
+local function getClosestVisiblePlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
 
-local function isVisible(targetPart)
-    local ray = Ray.new(Cam.CFrame.Position, (targetPart.Position - Cam.CFrame.Position).unit * 1000)
-    local hit, position = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
-    return hit and hit:IsDescendantOf(targetPart.Parent)
-end
-
-local function getClosestPlayerInFOV(trg_part)
-    local nearest = nil
-    local last = math.huge
-    local playerMousePos = Cam.ViewportSize / 2
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and not isSameTeam(player) then -- Team check added
-            local part = player.Character and player.Character:FindFirstChild(trg_part)
-            if part and isVisible(part) then -- Visible check added
-                local ePos, isVisibleOnScreen = Cam:WorldToViewportPoint(part.Position)
-                local distance = (Vector2.new(ePos.x, ePos.y) - playerMousePos).Magnitude
-
-                if distance < last and isVisibleOnScreen and distance < fov then
-                    last = distance
-                    nearest = player
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and not isSameTeam(player) and isPlayerVisible(player) then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)).Magnitude
+                if distance < shortestDistance then
+                    closestPlayer = player
+                    shortestDistance = distance
                 end
             end
         end
     end
 
-    return nearest
+    return closestPlayer
 end
 
 RunService.RenderStepped:Connect(function()
-    updateDrawings()
-    local closest = getClosestPlayerInFOV("Head")
-    if closest and closest.Character:FindFirstChild("Head") then
-        lookAt(closest.Character.Head.Position)
+    if aimbotEnabled then
+        local targetPlayer = getClosestVisiblePlayer()
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = targetPlayer.Character.HumanoidRootPart
+            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, hrp.Position)
+        end
     end
 end)
