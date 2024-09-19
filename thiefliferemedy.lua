@@ -1,4 +1,5 @@
 
+
 game:GetService("StarterGui"):SetCore("SendNotification",{
 Title = "Remedy Softworks",
 Text = "Thank You for Using Remedy Softworks! :)", 
@@ -91,7 +92,7 @@ function user(str)
 			return CurrentPlayer
 		end
 	end
-	lib:MakeNotification({Name = "Remedy Softworks | Warn", Content = "Can't find player!", Image = nil, Time = 5})
+	lib:MakeNotification({Name = "nick7 hub | Warn", Content = "Can't find player!", Image = nil, Time = 5})
 end
 main:AddSection({Name = "World"})
 main:AddButton({
@@ -102,11 +103,6 @@ main:AddButton({
 		end
 	end
 })
-
-
-			
-
-
 main:AddToggle({
 	Name = "Unlock VIP",
 	Default = true,
@@ -129,7 +125,7 @@ main:AddToggle({
 						for _,j in pairs(v.SurfaceGui:GetChildren()) do
 							if j:IsA("TextLabel") then
 								if j.Text == "LOCKED" then
-									j.Text = "RemedySoftworks"
+									j.Text = "Remedy Softworks :3"
 								elseif j.Text == "VIP USERS" then
 									j.Text = "for you (& VIP)"
 								end
@@ -400,7 +396,7 @@ club:AddButton({
 	Callback = function()
 		replicated.Events.Guild.RequestGuildInfo:FireServer()
 		replicated.Events.Guild.SendCreateGuild:FireServer(getgenv().n7tls.clubtab.club.name, getgenv().n7tls.clubtab.club.color, getgenv().n7tls.clubtab.club.decal, getgenv().n7tls.clubtab.club.description)
-		lib:MakeNotification({Name = "nick7 hub | Success", Content = "Created club", Image = nil, Time = 5})
+		lib:MakeNotification({Name = "Remedy Softworks | Success", Content = "Created club", Image = nil, Time = 5})
 	end,
 })
 
