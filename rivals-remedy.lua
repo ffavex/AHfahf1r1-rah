@@ -117,7 +117,7 @@ function this_is_stupid(state)
     settings.teamCheck = state
 end
 
---// Aimbot with FOV and UI toggle button
+--// Aimbot with unfilled FOV and UI toggle button
 
 local settings = {
     enabled = false, -- Starts disabled
@@ -148,7 +148,7 @@ toggleButton.TextColor3 = Color3.new(1, 1, 1)
 toggleButton.BorderSizePixel = 0
 toggleButton.Font = Enum.Font.SourceSansBold
 
---// FOV Circle
+--// FOV Circle (Unfilled)
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1
 fovCircle.NumSides = 100
@@ -156,6 +156,7 @@ fovCircle.Radius = settings.fovSize
 fovCircle.Color = Color3.new(1, 1, 1)
 fovCircle.Visible = false
 fovCircle.Transparency = 1
+fovCircle.Filled = false -- Make sure the FOV circle is not filled in
 
 --// Function to toggle aimbot
 local function toggleAimbot()
@@ -220,21 +221,20 @@ end
 --// Function to snap aim to the target
 local function snapAimAt(target)
     if target and target.Character and target.Character:FindFirstChild(settings.aimAtPart) then
-        local partPosition = target.Character[settings.aimAtPart].Position
-        local cameraPosition = Camera.CFrame.Position
-        local direction = (partPosition - cameraPosition).unit
-        -- Instantly snap the camera's CFrame towards the target
-        Camera.CFrame = CFrame.new(cameraPosition, cameraPosition + direction)
+        local targetPart = target.Character[settings.aimAtPart]
+        local targetPosition = targetPart.Position
+        local screenPoint = Camera:WorldToViewportPoint(targetPosition)
+
+        -- Move mouse to the target
+        mousemoverel((screenPoint.X - UserInputService:GetMouseLocation().X) / 2, (screenPoint.Y - UserInputService:GetMouseLocation().Y) / 2)
     end
 end
 
---// Main loop to run aimbot when enabled
+--// Aimbot loop
 RunService.RenderStepped:Connect(function()
     if settings.enabled then
-        updateFovCircle() -- Update FOV circle position
+        updateFovCircle()
         local closestPlayer = getClosestPlayerInFov()
-        if closestPlayer then
-            snapAimAt(closestPlayer)
-        end
+        snapAimAt(closestPlayer)
     end
 end)
