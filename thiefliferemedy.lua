@@ -1,3 +1,11 @@
+
+game:GetService("StarterGui"):SetCore("SendNotification",{
+Title = "Remedy Softworks",
+Text = "Thank You for Using Remedy Softworks! :)", 
+
+Button1 = "Ok",
+Duration = 8
+})
 local RunService = game:GetService("RunService")
 local GC = getconnections or get_signal_cons
 if GC then
