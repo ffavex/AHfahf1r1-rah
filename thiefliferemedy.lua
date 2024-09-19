@@ -91,7 +91,7 @@ function user(str)
 			return CurrentPlayer
 		end
 	end
-	lib:MakeNotification({Name = "nick7 hub | Warn", Content = "Can't find player!", Image = nil, Time = 5})
+	lib:MakeNotification({Name = "Remedy Softworks | Warn", Content = "Can't find player!", Image = nil, Time = 5})
 end
 main:AddSection({Name = "World"})
 main:AddButton({
@@ -102,6 +102,24 @@ main:AddButton({
 		end
 	end
 })
+trading:AddToggle({
+	Name = "Loop Armor ",
+	Default = false,
+	Callback = function(Value)
+	local args = {
+    [1] = "b90afe54-7aa7-43ed-9c4c-0a2df7db012c"
+}
+
+game:GetService("ReplicatedStorage").Events.Armour.RequestEquip:FireServer(unpack(args))
+local args = {
+    [1] = "HeavyBodyArmour3"
+}
+
+game:GetService("ReplicatedStorage").Events.ArmourShop.RequestBuy:FireServer(unpack(args))
+			
+})
+
+
 main:AddToggle({
 	Name = "Unlock VIP",
 	Default = true,
