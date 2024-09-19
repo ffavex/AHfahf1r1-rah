@@ -119,6 +119,8 @@ end
 
 --// Aimbot with centered unfilled FOV circle and UI toggle button
 
+--// Aimbot with centered unfilled FOV circle and UI toggle button
+
 local settings = {
     enabled = false, -- Starts disabled
     teamCheck = false,
@@ -131,6 +133,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local mouse = game:GetService("Players").LocalPlayer:GetMouse()
 
 --// Create UI
 local screenGui = Instance.new("ScreenGui")
@@ -198,10 +201,10 @@ local function getClosestPlayerInFov()
             local targetPart = player.Character[settings.aimAtPart]
             local targetPosition = targetPart.Position
             -- Convert 3D position to 2D screen coordinates
-            local screenPoint = Camera:WorldToViewportPoint(targetPosition)
+            local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPosition)
 
             -- Check if the player is within the FOV circle
-            if isInFov(screenPoint) then
+            if onScreen and isInFov(screenPoint) then
                 -- Get the center of the screen for aiming
                 local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
                 local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - screenCenter).Magnitude
@@ -223,10 +226,15 @@ local function snapAimAt(target)
     if target and target.Character and target.Character:FindFirstChild(settings.aimAtPart) then
         local targetPart = target.Character[settings.aimAtPart]
         local targetPosition = targetPart.Position
-        local screenPoint = Camera:WorldToViewportPoint(targetPosition)
+        local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPosition)
 
-        -- Move mouse to the target
-        mousemoverel((screenPoint.X - UserInputService:GetMouseLocation().X) / 2, (screenPoint.Y - UserInputService:GetMouseLocation().Y) / 2)
+        if onScreen then
+            -- Move mouse to the target
+            local targetScreenPoint = Vector2.new(screenPoint.X, screenPoint.Y)
+            local mousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            local aimDirection = targetScreenPoint - mousePosition
+            mousemoverel(aimDirection.X * 0.1, aimDirection.Y * 0.1) -- Adjust sensitivity as needed
+        end
     end
 end
 
