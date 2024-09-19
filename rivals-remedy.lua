@@ -121,6 +121,7 @@ end
 --// Aimbot with UI toggle button
 
 --// Aimbot with UI toggle button
+--// Aimbot with UI toggle button
 
 local settings = {
     enabled = false, -- Starts disabled
@@ -161,7 +162,7 @@ toggleButton.MouseButton1Click:Connect(toggleAimbot)
 
 --// Function to find closest player (ignoring visibility)
 local function getClosestPlayer()
-    local closestPlayer
+    local closestPlayer = nil
     local shortestDistance = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
@@ -173,8 +174,9 @@ local function getClosestPlayer()
             end
             
             -- Get the position of the part we aim at
-            local targetPosition = player.Character[settings.aimAtPart].Position
-            -- Convert 3D position to 2D screen coordinates (ignores whether they're visible or not)
+            local targetPart = player.Character[settings.aimAtPart]
+            local targetPosition = targetPart.Position
+            -- Convert 3D position to 2D screen coordinates (ignores visibility)
             local screenPoint = Camera:WorldToViewportPoint(targetPosition)
             
             -- Get the mouse position for aiming
