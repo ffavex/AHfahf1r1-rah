@@ -124,7 +124,7 @@ main:AddToggle({
 						for _,j in pairs(v.SurfaceGui:GetChildren()) do
 							if j:IsA("TextLabel") then
 								if j.Text == "LOCKED" then
-									j.Text = "Remedy Softworks :3"
+									j.Text = "RemedySoftworks"
 								elseif j.Text == "VIP USERS" then
 									j.Text = "for you (& VIP)"
 								end
