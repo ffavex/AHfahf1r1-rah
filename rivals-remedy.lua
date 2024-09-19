@@ -117,7 +117,7 @@ function this_is_stupid(state)
     settings.teamCheck = state
 end
 
---// Aimbot with unfilled FOV and UI toggle button
+--// Aimbot with centered unfilled FOV circle and UI toggle button
 
 local settings = {
     enabled = false, -- Starts disabled
@@ -168,16 +168,16 @@ end
 
 toggleButton.MouseButton1Click:Connect(toggleAimbot)
 
---// Function to update FOV circle position
+--// Function to update FOV circle position (centered on screen)
 local function updateFovCircle()
-    local mousePosition = UserInputService:GetMouseLocation()
-    fovCircle.Position = mousePosition
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    fovCircle.Position = screenCenter
 end
 
 --// Function to check if a player is inside the FOV circle
 local function isInFov(position)
-    local mousePosition = UserInputService:GetMouseLocation()
-    local distance = (Vector2.new(position.X, position.Y) - mousePosition).Magnitude
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local distance = (Vector2.new(position.X, position.Y) - screenCenter).Magnitude
     return distance <= settings.fovSize
 end
 
@@ -202,9 +202,9 @@ local function getClosestPlayerInFov()
 
             -- Check if the player is within the FOV circle
             if isInFov(screenPoint) then
-                -- Get the mouse position for aiming
-                local mousePosition = UserInputService:GetMouseLocation()
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition).Magnitude
+                -- Get the center of the screen for aiming
+                local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - screenCenter).Magnitude
                 
                 -- Find the closest player based on distance to crosshair within FOV
                 if distance < shortestDistance then
