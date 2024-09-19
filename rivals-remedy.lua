@@ -117,16 +117,13 @@ function this_is_stupid(state)
     settings.teamCheck = state
 end
 
-
---// Aimbot with UI toggle button
-
---// Aimbot with UI toggle button
---// Aimbot with UI toggle button
+--// Aimbot with FOV and UI toggle button
 
 local settings = {
     enabled = false, -- Starts disabled
     teamCheck = false,
     aimAtPart = "HumanoidRootPart", -- The part to aim at, usually HumanoidRootPart or Head
+    fovSize = 75 -- Size of the FOV circle
 }
 
 local Players = game:GetService("Players")
@@ -151,17 +148,40 @@ toggleButton.TextColor3 = Color3.new(1, 1, 1)
 toggleButton.BorderSizePixel = 0
 toggleButton.Font = Enum.Font.SourceSansBold
 
+--// FOV Circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 1
+fovCircle.NumSides = 100
+fovCircle.Radius = settings.fovSize
+fovCircle.Color = Color3.new(1, 1, 1)
+fovCircle.Visible = false
+fovCircle.Transparency = 1
+
 --// Function to toggle aimbot
 local function toggleAimbot()
     settings.enabled = not settings.enabled
     toggleButton.Text = settings.enabled and "Disable Aimbot" or "Enable Aimbot"
     toggleButton.BackgroundColor3 = settings.enabled and Color3.new(0, 1, 0) or Color3.new(0.2, 0.2, 0.2)
+    fovCircle.Visible = settings.enabled -- Show the FOV circle only when the aimbot is enabled
 end
 
 toggleButton.MouseButton1Click:Connect(toggleAimbot)
 
---// Function to find closest player (ignoring visibility)
-local function getClosestPlayer()
+--// Function to update FOV circle position
+local function updateFovCircle()
+    local mousePosition = UserInputService:GetMouseLocation()
+    fovCircle.Position = mousePosition
+end
+
+--// Function to check if a player is inside the FOV circle
+local function isInFov(position)
+    local mousePosition = UserInputService:GetMouseLocation()
+    local distance = (Vector2.new(position.X, position.Y) - mousePosition).Magnitude
+    return distance <= settings.fovSize
+end
+
+--// Function to find closest player inside FOV
+local function getClosestPlayerInFov()
     local closestPlayer = nil
     local shortestDistance = math.huge
 
@@ -176,17 +196,20 @@ local function getClosestPlayer()
             -- Get the position of the part we aim at
             local targetPart = player.Character[settings.aimAtPart]
             local targetPosition = targetPart.Position
-            -- Convert 3D position to 2D screen coordinates (ignores visibility)
+            -- Convert 3D position to 2D screen coordinates
             local screenPoint = Camera:WorldToViewportPoint(targetPosition)
-            
-            -- Get the mouse position for aiming
-            local mousePosition = UserInputService:GetMouseLocation()
-            local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition).Magnitude
-            
-            -- Find the closest player based on distance to crosshair
-            if distance < shortestDistance then
-                shortestDistance = distance
-                closestPlayer = player
+
+            -- Check if the player is within the FOV circle
+            if isInFov(screenPoint) then
+                -- Get the mouse position for aiming
+                local mousePosition = UserInputService:GetMouseLocation()
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition).Magnitude
+                
+                -- Find the closest player based on distance to crosshair within FOV
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
             end
         end
     end
@@ -208,7 +231,8 @@ end
 --// Main loop to run aimbot when enabled
 RunService.RenderStepped:Connect(function()
     if settings.enabled then
-        local closestPlayer = getClosestPlayer()
+        updateFovCircle() -- Update FOV circle position
+        local closestPlayer = getClosestPlayerInFov()
         if closestPlayer then
             snapAimAt(closestPlayer)
         end
