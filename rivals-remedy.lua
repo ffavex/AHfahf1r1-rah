@@ -120,11 +120,12 @@ end
 
 --// Aimbot with UI toggle button
 
+--// Aimbot with UI toggle button
+
 local settings = {
     enabled = false, -- Starts disabled
     teamCheck = false,
     aimAtPart = "HumanoidRootPart", -- The part to aim at, usually HumanoidRootPart or Head
-    aimSmoothness = 0.1, -- Smoothness for more human-like aiming
 }
 
 local Players = game:GetService("Players")
@@ -132,7 +133,6 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-local TweenService = game:GetService("TweenService")
 
 --// Create UI
 local screenGui = Instance.new("ScreenGui")
@@ -159,28 +159,32 @@ end
 
 toggleButton.MouseButton1Click:Connect(toggleAimbot)
 
---// Function to find closest player
+--// Function to find closest player (ignoring visibility)
 local function getClosestPlayer()
     local closestPlayer
     local shortestDistance = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
+        -- Ensure the player isn't the local player and the character exists
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(settings.aimAtPart) then
+            -- If team check is enabled, skip teammates
             if settings.teamCheck and player.Team == LocalPlayer.Team then
                 continue
             end
             
+            -- Get the position of the part we aim at
             local targetPosition = player.Character[settings.aimAtPart].Position
-            local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPosition)
+            -- Convert 3D position to 2D screen coordinates (ignores whether they're visible or not)
+            local screenPoint = Camera:WorldToViewportPoint(targetPosition)
             
-            if onScreen then
-                local mousePosition = UserInputService:GetMouseLocation()
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition).Magnitude
-                
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player
-                end
+            -- Get the mouse position for aiming
+            local mousePosition = UserInputService:GetMouseLocation()
+            local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition).Magnitude
+            
+            -- Find the closest player based on distance to crosshair
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = player
             end
         end
     end
@@ -188,15 +192,14 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
---// Function to aim at target
-local function aimAt(target)
+--// Function to snap aim to the target
+local function snapAimAt(target)
     if target and target.Character and target.Character:FindFirstChild(settings.aimAtPart) then
         local partPosition = target.Character[settings.aimAtPart].Position
         local cameraPosition = Camera.CFrame.Position
         local direction = (partPosition - cameraPosition).unit
-        local newCFrame = CFrame.new(cameraPosition, cameraPosition + direction)
-        
-        Camera.CFrame = Camera.CFrame:Lerp(newCFrame, settings.aimSmoothness)
+        -- Instantly snap the camera's CFrame towards the target
+        Camera.CFrame = CFrame.new(cameraPosition, cameraPosition + direction)
     end
 end
 
@@ -205,7 +208,7 @@ RunService.RenderStepped:Connect(function()
     if settings.enabled then
         local closestPlayer = getClosestPlayer()
         if closestPlayer then
-            aimAt(closestPlayer)
+            snapAimAt(closestPlayer)
         end
     end
 end)
