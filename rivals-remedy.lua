@@ -233,7 +233,7 @@ local function snapAimAt(target)
             local targetScreenPoint = Vector2.new(screenPoint.X, screenPoint.Y)
             local mousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
             local aimDirection = targetScreenPoint - mousePosition
-            mousemoverel(aimDirection.X * 0.1, aimDirection.Y * 0.1) -- Adjust sensitivity as needed
+            mousemoverel(aimDirection.X * 0.5, aimDirection.Y * 0.5) -- Faster snapping sensitivity
         end
     end
 end
