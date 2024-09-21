@@ -117,103 +117,49 @@ function this_is_stupid(state)
     settings.teamCheck = state
 end
 
---// Aimbot with centered unfilled FOV circle and UI toggle button
-
---// Aimbot with centered unfilled FOV circle and UI toggle button
-
-local settings = {
-    enabled = false, -- Starts disabled
-    teamCheck = false,
-    aimAtPart = "HumanoidRootPart", -- The part to aim at, usually HumanoidRootPart or Head
-    fovSize = 75 -- Size of the FOV circle
-}
-
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local Camera = game.Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+local UIS = game:GetService("UserInputService")
 
---// Create UI
-local screenGui = Instance.new("ScreenGui")
-local toggleButton = Instance.new("TextButton")
+-- Settings for the aimbot
+local settings = {
+    aimEnabled = false,        -- Starts off, toggled by button
+    fovRadius = 100,           -- Field of View (FOV) radius
+    aimAtPart = "Head",        -- Part of the character to aim at
+}
 
-screenGui.Parent = game.CoreGui
-
-toggleButton.Parent = screenGui
-toggleButton.Position = UDim2.new(0.9, 0, 0.1, 0) -- Position in the top-right corner
-toggleButton.Size = UDim2.new(0, 150, 0, 50)
-toggleButton.Text = "Enable Aimbot"
-toggleButton.TextScaled = true
-toggleButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.BorderSizePixel = 0
-toggleButton.Font = Enum.Font.SourceSansBold
-
---// FOV Circle (Unfilled)
+-- Create a FOV circle for visualization
 local fovCircle = Drawing.new("Circle")
-fovCircle.Thickness = 1
-fovCircle.NumSides = 100
-fovCircle.Radius = settings.fovSize
-fovCircle.Color = Color3.new(1, 1, 1)
-fovCircle.Visible = false
-fovCircle.Transparency = 1
-fovCircle.Filled = false -- Make sure the FOV circle is not filled in
+fovCircle.Radius = settings.fovRadius
+fovCircle.Color = Color3.new(1, 0, 0)
+fovCircle.Thickness = 2
+fovCircle.Transparency = 0.5
+fovCircle.Filled = false
+fovCircle.Visible = true
 
---// Function to toggle aimbot
-local function toggleAimbot()
-    settings.enabled = not settings.enabled
-    toggleButton.Text = settings.enabled and "Disable Aimbot" or "Enable Aimbot"
-    toggleButton.BackgroundColor3 = settings.enabled and Color3.new(0, 1, 0) or Color3.new(0.2, 0.2, 0.2)
-    fovCircle.Visible = settings.enabled -- Show the FOV circle only when the aimbot is enabled
-end
-
-toggleButton.MouseButton1Click:Connect(toggleAimbot)
-
---// Function to update FOV circle position (centered on screen)
+-- Update the FOV circle position and size
 local function updateFovCircle()
-    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    fovCircle.Position = screenCenter
+    fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    fovCircle.Radius = settings.fovRadius
 end
 
---// Function to check if a player is inside the FOV circle
-local function isInFov(position)
-    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local distance = (Vector2.new(position.X, position.Y) - screenCenter).Magnitude
-    return distance <= settings.fovSize
-end
-
---// Function to find closest player inside FOV
+-- Function to get the closest player within the FOV
 local function getClosestPlayerInFov()
     local closestPlayer = nil
-    local shortestDistance = math.huge
+    local shortestDistance = settings.fovRadius
 
     for _, player in pairs(Players:GetPlayers()) do
-        -- Ensure the player isn't the local player and the character exists
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(settings.aimAtPart) then
-            -- If team check is enabled, skip teammates
-            if settings.teamCheck and player.Team == LocalPlayer.Team then
-                continue
-            end
-            
-            -- Get the position of the part we aim at
             local targetPart = player.Character[settings.aimAtPart]
-            local targetPosition = targetPart.Position
-            -- Convert 3D position to 2D screen coordinates
-            local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPosition)
+            local screenPoint = Camera:WorldToViewportPoint(targetPart.Position)
+            local distanceFromCenter = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
 
-            -- Check if the player is within the FOV circle
-            if onScreen and isInFov(screenPoint) then
-                -- Get the center of the screen for aiming
-                local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - screenCenter).Magnitude
-                
-                -- Find the closest player based on distance to crosshair within FOV
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player
-                end
+            if distanceFromCenter < shortestDistance then
+                closestPlayer = player
+                shortestDistance = distanceFromCenter
             end
         end
     end
@@ -221,28 +167,53 @@ local function getClosestPlayerInFov()
     return closestPlayer
 end
 
---// Function to snap aim to the target
-local function snapAimAt(target)
+-- Lock aim directly at the target (No smoothing)
+local function lockAimAt(target)
     if target and target.Character and target.Character:FindFirstChild(settings.aimAtPart) then
         local targetPart = target.Character[settings.aimAtPart]
         local targetPosition = targetPart.Position
-        local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPosition)
-
-        if onScreen then
-            -- Move mouse to the target
-            local targetScreenPoint = Vector2.new(screenPoint.X, screenPoint.Y)
-            local mousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            local aimDirection = targetScreenPoint - mousePosition
-            mousemoverel(aimDirection.X * 0.5, aimDirection.Y * 0.5) -- Faster snapping sensitivity
-        end
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
     end
 end
 
---// Aimbot loop
+-- Aimbot loop
 RunService.RenderStepped:Connect(function()
-    if settings.enabled then
-        updateFovCircle()
+    -- Update FOV circle
+    updateFovCircle()
+
+    -- Aimbot functionality
+    if settings.aimEnabled then
         local closestPlayer = getClosestPlayerInFov()
-        snapAimAt(closestPlayer)
+        if closestPlayer then
+            lockAimAt(closestPlayer)
+        end
+    end
+end)
+
+-- Create a GUI button for toggling aimbot
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Set up the Toggle Button
+ToggleButton.Name = "AimbotToggle"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(32, 32, 32)  -- Button color
+ToggleButton.Size = UDim2.new(0, 100, 0, 50)  -- Button size
+ToggleButton.Position = UDim2.new(0.1, 0, 0.9, 0)  -- Position at the bottom left
+ToggleButton.Font = Enum.Font.SourceSans
+ToggleButton.Text = "Toggle Aimbot"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Text color
+ToggleButton.TextSize = 24
+
+-- Toggle the aimbot on or off when the button is pressed
+ToggleButton.MouseButton1Click:Connect(function()
+    settings.aimEnabled = not settings.aimEnabled
+    if settings.aimEnabled then
+        ToggleButton.Text = "Aimbot: ON"
+    else
+        ToggleButton.Text = "Aimbot: OFF"
     end
 end)
