@@ -1,3 +1,6 @@
+G.Key = "TEST123"
+
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -5,10 +8,6 @@ local player = Players.LocalPlayer
 -- Replace with your actual URL
 local keyValidationUrl = "https://vexxexploits.repl.co/checkkey.php?Checkkey="
 local blacklistUrl = "https://replit.com/@vexxexploits/Authenticationn#blacklistedhwids.txt"
-
--- Your key goes here
-G.Key = "YourKeyHere"
-
 -- Function to get the player's client ID (user ID)
 local function getClientID()
     return player.UserId
