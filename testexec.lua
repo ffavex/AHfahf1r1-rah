@@ -1,6 +1,4 @@
 G.Key = "TEST123"
-
-
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -8,6 +6,7 @@ local player = Players.LocalPlayer
 -- Replace with your actual URL
 local keyValidationUrl = "https://vexxexploits.repl.co/checkkey.php?Checkkey="
 local blacklistUrl = "https://replit.com/@vexxexploits/Authenticationn#blacklistedhwids.txt"
+
 -- Function to get the player's client ID (user ID)
 local function getClientID()
     return player.UserId
@@ -61,9 +60,22 @@ local function main()
         return
     end
 
-    -- Place your main script logic here
+    -- Key is valid; execute another script
     print("Key is valid and user is not blacklisted. Executing main script...")
-    -- Add your main code here
+    
+    local scriptToExecute = [[
+      "https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/refs/heads/main/thiefliferemedy.lua"
+        print("Main script executed successfully!")
+    ]]
+
+    -- Execute the additional script using loadstring
+    local success, loadError = pcall(function()
+        loadstring("https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/refs/heads/main/thiefliferemedy.lua")()
+    end)
+
+    if not success then
+        warn("Error executing main script: " .. loadError)
+    end
 end
 
 -- Execute the main function
