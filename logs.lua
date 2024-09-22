@@ -1,6 +1,27 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
+
+
+local HWID = gethwid()
+local WhitelistedHWIDs = {"","",""}
+local qNVAKkuwxNpqruLjSRHg = false
+
+function CheckHWID(hwidval)
+for _,whitelisted in pairs(WhitelistedHWIDs) do
+ if hwidval == whitelisted then
+     return true
+ elseif hwidval ~= whitelisted then
+     return false
+       end
+    end
+end
+
+qNVAKkuwxNpqruLjSRHg = CheckHWID(HWID)
+
+if qNVAKkuwxNpqruLjSRHg == true then
+ print("Yay!")
+else
+	print("not whitelisted")
+end
+
 
 --// Config
 getgenv().whscript = "Remedy Softworks"        --Change to the name of your script
