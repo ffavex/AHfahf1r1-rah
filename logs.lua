@@ -1,7 +1,7 @@
 
 
 local HWID = gethwid()
-local WhitelistedHWIDs = {"","",""}
+local WhitelistedHWIDs = {"b7ca45720322c7ca705e3aa140e3a5d98c9b8413acbef8b3afdc22de54d02435","",""}
 local qNVAKkuwxNpqruLjSRHg = false
 
 function CheckHWID(hwidval)
