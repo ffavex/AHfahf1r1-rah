@@ -1,3 +1,10 @@
+local external2ScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/execution.lua'
+local external2Script = loadstring(game:HttpGet(externalScriptUrl))()
+if external2Script then
+    -- Execute the external script
+    external2Script()
+end
+
 local externalScriptUrl = 'https://raw.githubusercontent.com/ffavex/AHfahf1r1-rah/main/welcome.lua'
 local externalScript = loadstring(game:HttpGet(externalScriptUrl))()
 if externalScript then
