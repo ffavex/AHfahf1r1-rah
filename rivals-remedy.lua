@@ -1,7 +1,4 @@
 --// super trash RIVALS esp 
-Print("Injecting Malware")
-
-
 
 local settings = {
     enabled = true,
